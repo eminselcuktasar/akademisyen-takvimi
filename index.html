@@ -3,951 +3,719 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akademisyen Takvimi</title>
+    <title>Takvim ve Görev Uygulaması</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
-        
+        /* Inter font for a modern look */
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+            background-color: #f3f4f6; /* Light gray background */
         }
-        
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        /* Custom scrollbar for better aesthetics */
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
         }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
+        .scrollable-content::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
         }
-        
-        /* Takvim */
-        .calendar {
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Calendar specific styles */
+        .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: 2px;
         }
-        
-        .day {
-            aspect-ratio: 1;
+        .calendar-day {
+            padding: 8px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            min-height: 50px; /* Ensure days have enough height */
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: flex-start;
-            padding: 8px 4px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid transparent;
-            min-height: 80px;
+            align-items: center;
+            position: relative;
         }
-        
-        .day:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        .calendar-day.current-month {
+            background-color: #f0f9ff; /* Light blue for current month days */
+            color: #333;
         }
-        
-        .day.other-month {
-            background: rgba(255, 255, 255, 0.3);
-            color: #9ca3af;
+        .calendar-day.other-month {
+            background-color: #f8fafc; /* Lighter for other month days */
+            color: #9ca3af; /* Gray out other month days */
         }
-        
-        .day.today {
-            border-color: #3b82f6;
-            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        .calendar-day.today {
+            background-color: #dbeafe; /* Even lighter blue for today */
+            border: 2px solid #3b82f6; /* Blue border for today */
+        }
+        .calendar-day.has-event {
+            background-color: #bfdbfe; /* Medium blue if has event */
             font-weight: bold;
         }
-        
-        .day.selected {
-            border-color: #8b5cf6;
-            background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
-        }
-        
-        /* Kategori renkleri */
-        .day.has-rektorluk { background: linear-gradient(135deg, #fecaca, #f87171); }
-        .day.has-fakulte { background: linear-gradient(135deg, #bbf7d0, #4ade80); }
-        .day.has-tatil { background: linear-gradient(135deg, #fed7aa, #fb923c); }
-        .day.has-toplanti { background: linear-gradient(135deg, #e9d5ff, #a855f7); }
-        .day.has-etkinlik { background: linear-gradient(135deg, #fbcfe8, #ec4899); }
-        .day.has-gorev { background: linear-gradient(135deg, #dbeafe, #60a5fa); }
-        
-        .day-number {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        
-        .event-dots {
-            display: flex;
-            gap: 2px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            opacity: 0.8;
-        }
-        
-        .dot.rektorluk { background: #dc2626; }
-        .dot.fakulte { background: #16a34a; }
-        .dot.tatil { background: #ea580c; }
-        .dot.toplanti { background: #9333ea; }
-        .dot.etkinlik { background: #db2777; }
-        .dot.gorev { background: #2563eb; }
-        
-        /* Form elemanları */
-        .form-input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-        
-        .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
-        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
-        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
-        .btn-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
-        
-        /* Event cards */
-        .event-card {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: all 0.3s ease;
-        }
-        
-        .event-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-        
-        .category-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
+        .calendar-day.selected-date {
+            background-color: #3b82f6; /* Darker blue for selected date */
             color: white;
         }
-        
-        .badge-rektorluk { background: #dc2626; }
-        .badge-fakulte { background: #16a34a; }
-        .badge-tatil { background: #ea580c; }
-        .badge-toplanti { background: #9333ea; }
-        .badge-etkinlik { background: #db2777; }
-        .badge-gorev { background: #2563eb; }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container { padding: 10px; }
-            .day { min-height: 60px; padding: 4px 2px; }
-            .day-number { font-size: 14px; }
-            .main-grid { grid-template-columns: 1fr; gap: 20px; }
+        .calendar-day:hover:not(.selected-date) {
+            background-color: #e0f2fe;
         }
-        
-        /* Animasyonlar */
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .day-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
         }
-        
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #ef4444; /* Red dot for events */
+            border-radius: 50%;
+            margin-top: 2px;
         }
-        
-        /* Notification */
-        .notification {
+        .holiday-dot {
+            background-color: #10b981; /* Green dot for holidays */
+        }
+        /* Message box styling */
+        #messageBox {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 1000;
-            padding: 16px 24px;
-            border-radius: 12px;
+            background-color: #333;
             color: white;
-            font-weight: 600;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
         }
-        
-        .notification.show { transform: translateX(0); }
-        .notification.success { background: linear-gradient(135deg, #10b981, #059669); }
-        .notification.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .notification.info { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-        
-        .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 30px; }
-        .scrollable { max-height: 400px; overflow-y: auto; }
-        .scrollable::-webkit-scrollbar { width: 6px; }
-        .scrollable::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
-        .scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        #messageBox.show {
+            opacity: 1;
+        }
     </style>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration (Provided by Canvas Environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUserId = null;
+        let isAuthReady = false;
+        
+        // Expose Firebase instances and global state variables immediately
+        window.firebaseApp = app;
+        window.firebaseDb = db;
+        window.firebaseAuth = auth;
+        window.currentUserId = currentUserId; // Will be updated by onAuthStateChanged
+        window.isAuthReady = isAuthReady; // Will be updated by onAuthStateChanged
+        window.initialAuthToken = initialAuthToken; // Pass the token
+        window.allEvents = []; // Initialize globally to prevent undefined errors
+        window.selectedDate = null; // Initialize globally
+
+        // Function to show custom messages
+        function showMessage(message, duration = 3000) {
+            const messageBox = document.getElementById('messageBox');
+            if (messageBox) { // Ensure messageBox exists before trying to use it
+                messageBox.textContent = message;
+                messageBox.classList.add('show');
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.remove('show');
+                    messageBox.classList.add('hidden');
+                }, duration);
+            } else {
+                console.warn("MessageBox element not found. Message:", message);
+            }
+        }
+        window.showMessage = showMessage; // Expose globally
+
+        // Sayfa yüklendiğinde ve Firebase hazır olduğunda etkinlikleri yükle
+        window.loadEvents = () => {
+            if (!isAuthReady || !db) { // Check local flags for this script
+                console.log("Firebase Auth or DB not ready yet. Waiting for loadEvents to be called again.");
+                return;
+            }
+
+            // Public collection for shared calendar events
+            const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/calendarEvents`);
+
+            // Listen for real-time updates
+            onSnapshot(eventsCollectionRef, (snapshot) => {
+                window.allEvents = snapshot.docs.map(doc => ({ // Assign to window.allEvents
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log("Events loaded/updated from Firestore:", window.allEvents);
+                // Ensure DOM elements for rendering are available
+                if (document.getElementById('calendarDays') && document.getElementById('eventList')) {
+                    renderCalendar(); // Re-render calendar to update event dots
+                    renderEvents(window.allEvents, window.selectedDate); // Re-render event list, use window.allEvents
+                } else {
+                    console.warn("DOM elements for calendar/event list not yet available. Waiting for DOMContentLoaded.");
+                }
+            }, (error) => {
+                console.error("Error fetching events from Firestore:", error);
+                showMessage("Etkinlikler yüklenirken bir hata oluştu.", 5000);
+            });
+        };
+
+        // Listen for authentication state changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                console.log("Authenticated as:", currentUserId);
+            } else {
+                // If no user, try to sign in with custom token or anonymously
+                if (initialAuthToken) {
+                    try {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        currentUserId = auth.currentUser.uid;
+                        console.log("Signed in with custom token:", currentUserId);
+                    } catch (error) {
+                        console.error("Error signing in with custom token:", error);
+                        // Fallback to anonymous if custom token fails
+                        try {
+                            await signInAnonymously(auth);
+                            currentUserId = auth.currentUser.uid;
+                            console.log("Signed in anonymously (fallback):", currentUserId);
+                        } catch (anonError) {
+                            console.error("Error signing in anonymously:", anonError);
+                        }
+                    }
+                } else {
+                    try {
+                        await signInAnonymously(auth);
+                        currentUserId = auth.currentUser.uid;
+                        console.log("Signed in anonymously:", currentUserId);
+                    } catch (error) {
+                        console.error("Error signing in anonymously:", error);
+                    }
+                }
+            }
+            // Update global variables after auth state is determined
+            window.currentUserId = currentUserId;
+            window.isAuthReady = true;
+            
+            // Update UI display - REMOVED THIS LINE
+            // const userIdDisplay = document.getElementById('userIdDisplay');
+            // if (userIdDisplay) {
+            //     userIdDisplay.textContent = `Kullanıcı ID: ${currentUserId || 'Misafir'}`;
+            // }
+
+            // Once auth is ready, load events
+            window.loadEvents();
+        });
+
+        // DOMContentLoaded is handled in the main script block to ensure all elements are ready
+    </script>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">📅 Öğretmen Takvimi</h1>
-            <p class="text-white/80 text-lg">Görev ve Tatil Yönetimi</p>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-4xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">Takvim ve Görev Yöneticisi</h1>
+        <!-- Kullanıcı ID'si gösterimi kaldırıldı -->
+        <!-- <p id="userIdDisplay" class="text-sm text-gray-600 text-center mb-2">Kullanıcı ID: Yükleniyor...</p> -->
+
+        <!-- Kullanıcı Adı Girişi -->
+        <div class="mb-6 text-center">
+            <label for="userNameInput" class="block text-sm font-medium text-gray-700 mb-1">Kullanıcı Adınız:</label>
+            <input type="text" id="userNameInput" placeholder="Adınızı buraya girin (örn: Ayşe Öğretmen)" class="inline-block w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            <button id="saveUserNameBtn" class="mt-2 md:mt-0 md:ml-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Adımı Kaydet
+            </button>
+            <p id="currentUserNameDisplay" class="text-sm text-gray-500 mt-2">Mevcut Adınız: <span id="displayedUserName">Henüz Ayarlanmadı</span></p>
         </div>
 
-        <!-- Setup Section -->
-        <div id="setupSection" class="glass rounded-2xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold text-white mb-6">⚙️ Kurulum</h2>
-            
-            <!-- Supabase Config -->
-            <div id="supabaseConfig" class="mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-white/80 text-sm font-medium mb-2">Supabase URL</label>
-                        <input type="url" id="supabaseUrl" placeholder="https://xyz.supabase.co" class="form-input">
-                    </div>
-                    <div>
-                        <label class="block text-white/80 text-sm font-medium mb-2">API Key (anon public)</label>
-                        <input type="password" id="supabaseKey" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." class="form-input">
-                    </div>
-                </div>
-                <button id="connectBtn" class="btn btn-success">🔗 Bağlan</button>
-                <div id="connectionStatus" class="mt-3 text-sm text-white/60">Bağlantı bilgilerini girin</div>
-            </div>
-            
-            <!-- User Setup -->
-            <div id="userConfig" class="hidden">
-                <div class="flex flex-col md:flex-row gap-4 items-end">
-                    <div class="flex-1">
-                        <label class="block text-white/80 text-sm font-medium mb-2">Kullanıcı Adınız</label>
-                        <input type="text" id="userName" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" class="form-input">
-                    </div>
-                    <button id="saveUserBtn" class="btn btn-primary">💾 Kaydet</button>
-                    <button id="adminBtn" class="btn btn-warning">🔐 Yönetici</button>
-                </div>
-                <div id="currentUser" class="mt-3 text-white/80 text-center">Mevcut kullanıcı: <span class="font-semibold">Belirtilmedi</span></div>
-            </div>
+        <!-- Uyarı Mesajı -->
+        <div id="storageWarning" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg mb-6" role="alert">
+            <p class="font-bold">Önemli Not:</p>
+            <p class="text-sm">Bu uygulama verileri Google Firebase Firestore'da bulutta kaydeder. Veriler gerçek zamanlı olarak senkronize edilir, böylece farklı kullanıcılar (hocalarınız dahil) aynı takvime ekleme ve düzenleme yapabilir. Verileriniz uygulamanın benzersiz kimliği altında herkese açık olarak saklanır.</p>
         </div>
 
-        <!-- Admin Panel -->
-        <div id="adminPanel" class="glass rounded-2xl p-6 mb-8 hidden">
-            <h3 class="text-xl font-semibold text-white mb-4">📊 Yönetici Paneli</h3>
-            <div class="flex gap-4 items-end mb-4">
-                <div class="flex-1">
-                    <input type="password" id="adminPassword" placeholder="Yönetici şifresi" class="form-input">
+        <!-- Calendar and Event Form/List Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Calendar Section -->
+            <div class="lg:col-span-1">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Takvim</h2>
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="prevMonthBtn" class="p-2 rounded-full hover:bg-gray-200 transition duration-150">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <span id="currentMonthYear" class="text-lg font-bold text-gray-800"></span>
+                        <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-200 transition duration-150">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="calendar-grid text-sm font-medium text-gray-700 mb-2">
+                        <div class="text-center">Pzt</div>
+                        <div class="text-center">Sal</div>
+                        <div class="text-center">Çar</div>
+                        <div class="text-center">Per</div>
+                        <div class="text-center">Cum</div>
+                        <div class="text-center">Cmt</div>
+                        <div class="text-center">Paz</div>
+                    </div>
+                    <div id="calendarDays" class="calendar-grid">
+                        <!-- Calendar days will be generated here -->
+                    </div>
                 </div>
-                <button id="loginBtn" class="btn btn-danger">🔓 Giriş</button>
             </div>
-            <div id="reportSection" class="hidden">
-                <div class="flex gap-4 mb-4">
-                    <button id="generateReportBtn" class="btn btn-purple">📊 Rapor Oluştur</button>
-                    <button id="exportBtn" class="btn btn-success">📑 Excel İndir</button>
-                </div>
-                <div id="reportContent"></div>
-            </div>
-        </div>
 
-        <!-- Main Content -->
-        <div id="mainContent" class="hidden">
-            <div class="main-grid">
-                <!-- Calendar -->
-                <div class="glass rounded-2xl p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold text-white">📅 Takvim</h2>
-                        <div class="flex items-center gap-3">
-                            <button id="prevBtn" class="btn btn-primary">‹</button>
-                            <span id="monthYear" class="text-white font-semibold min-w-[150px] text-center"></span>
-                            <button id="nextBtn" class="btn btn-primary">›</button>
+            <!-- Event Form and List Section -->
+            <div class="lg:col-span-1">
+                <!-- Görev Ekleme Formu -->
+                <div class="mb-8">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Yeni Görev/Etkinlik Ekle</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi:</label>
+                            <input type="date" id="startDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi:</label>
+                            <input type="date" id="endDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                         </div>
                     </div>
-                    
-                    <!-- Week headers -->
-                    <div class="calendar mb-4">
-                        <div class="text-center font-semibold text-white/80 p-2">Pzt</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Sal</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Çar</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Per</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Cum</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Cmt</div>
-                        <div class="text-center font-semibold text-white/80 p-2">Paz</div>
+                    <div class="mt-4">
+                        <label for="eventTitle" class="block text-sm font-medium text-gray-700 mb-1">Başlık:</label>
+                        <input type="text" id="eventTitle" placeholder="Görev veya etkinlik başlığı" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
-                    
-                    <!-- Calendar days -->
-                    <div id="calendar" class="calendar"></div>
-                    
-                    <!-- Legend -->
-                    <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                        <div class="flex items-center gap-2"><div class="dot rektorluk"></div><span class="text-white/80">🏛️ Rektörlük</span></div>
-                        <div class="flex items-center gap-2"><div class="dot fakulte"></div><span class="text-white/80">🏢 Fakülte</span></div>
-                        <div class="flex items-center gap-2"><div class="dot tatil"></div><span class="text-white/80">🏖️ Tatil</span></div>
-                        <div class="flex items-center gap-2"><div class="dot toplanti"></div><span class="text-white/80">🤝 Toplantı</span></div>
-                        <div class="flex items-center gap-2"><div class="dot etkinlik"></div><span class="text-white/80">🎉 Etkinlik</span></div>
-                        <div class="flex items-center gap-2"><div class="dot gorev"></div><span class="text-white/80">📋 Görev</span></div>
+                    <div class="mt-4">
+                        <label for="eventDescription" class="block text-sm font-medium text-gray-700 mb-1">Açıklama (İsteğe Bağlı):</label>
+                        <textarea id="eventDescription" rows="3" placeholder="Detaylı açıklama" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
+                    <div class="mt-4 flex items-center">
+                        <input type="checkbox" id="isHoliday" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="isHoliday" class="ml-2 block text-sm text-gray-900">Tatil mi?</label>
+                    </div>
+                    <button id="addEventBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Görev/Etkinlik Ekle
+                    </button>
                 </div>
 
-                <!-- Right Panel -->
-                <div class="space-y-6">
-                    <!-- Add Event Form -->
-                    <div class="glass rounded-2xl p-6">
-                        <h3 class="text-xl font-semibold text-white mb-4">➕ Yeni Etkinlik</h3>
-                        
-                        <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-white/80 text-sm font-medium mb-2">Başlangıç</label>
-                                    <input type="date" id="startDate" class="form-input">
-                                </div>
-                                <div>
-                                    <label class="block text-white/80 text-sm font-medium mb-2">Bitiş</label>
-                                    <input type="date" id="endDate" class="form-input">
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-white/80 text-sm font-medium mb-2">Başlık</label>
-                                <input type="text" id="title" placeholder="Etkinlik başlığı" class="form-input">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-white/80 text-sm font-medium mb-2">Açıklama</label>
-                                <textarea id="description" rows="3" placeholder="Detaylı açıklama (isteğe bağlı)" class="form-input resize-none"></textarea>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-white/80 text-sm font-medium mb-2">Kategori</label>
-                                <select id="category" class="form-input">
-                                    <option value="gorev">📋 Genel Görev</option>
-                                    <option value="fakulte">🏢 Fakülte Görevi</option>
-                                    <option value="rektorluk">🏛️ Rektörlük Görevi</option>
-                                    <option value="tatil">🏖️ Tatil</option>
-                                    <option value="toplanti">🤝 Toplantı</option>
-                                    <option value="etkinlik">🎉 Etkinlik</option>
-                                </select>
-                            </div>
-                            
-                            <button id="addBtn" class="btn btn-success w-full">✨ Ekle</button>
-                        </div>
-                    </div>
-
-                    <!-- Events List -->
-                    <div class="glass rounded-2xl p-6">
-                        <h3 class="text-xl font-semibold text-white mb-4">📋 Etkinlikler</h3>
-                        <div id="eventsList" class="scrollable space-y-3">
-                            <div class="text-white/60 text-center py-8">Henüz etkinlik yok</div>
-                        </div>
+                <!-- Görev/Etkinlik Listesi -->
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Eklenen Görevler ve Etkinlikler</h2>
+                    <div id="eventList" class="space-y-4 max-h-96 overflow-y-auto scrollable-content p-2 rounded-lg border border-gray-200">
+                        <!-- Etkinlikler buraya JavaScript ile eklenecek -->
+                        <p class="text-gray-500 text-center" id="noEventsMessage">Henüz eklenmiş görev veya etkinlik yok.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Notification -->
-    <div id="notification" class="notification"></div>
+    <!-- Custom Message Box -->
+    <div id="messageBox" class="hidden"></div>
 
-    <script>
-        // Global State
-        const state = {
-            supabase: null,
-            currentUser: localStorage.getItem('teacherName') || '',
-            currentMonth: new Date().getMonth(),
-            currentYear: new Date().getFullYear(),
-            selectedDate: null,
-            events: [],
-            isAdmin: localStorage.getItem('isAdmin') === 'true'
-        };
+    <script type="module">
+        // Import necessary Firestore functions directly into this module script
+        import { collection, doc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const ADMIN_PASSWORD = 'admin123'; // Değiştirilebilir
-        const CATEGORY_PRIORITY = ['rektorluk', 'fakulte', 'tatil', 'toplanti', 'etkinlik', 'gorev'];
-        const CATEGORY_INFO = {
-            rektorluk: { icon: '🏛️', name: 'Rektörlük', color: '#dc2626' },
-            fakulte: { icon: '🏢', name: 'Fakülte', color: '#16a34a' },
-            tatil: { icon: '🏖️', name: 'Tatil', color: '#ea580c' },
-            toplanti: { icon: '🤝', name: 'Toplantı', color: '#9333ea' },
-            etkinlik: { icon: '🎉', name: 'Etkinlik', color: '#db2777' },
-            gorev: { icon: '📋', name: 'Görev', color: '#2563eb' }
-        };
+        // Ensure Firebase instances are available from the head script
+        const app = window.firebaseApp;
+        const db = window.firebaseDb;
+        const auth = window.firebaseAuth;
+        let currentUserId = window.currentUserId; // Will be updated by onAuthStateChanged
+        let isAuthReady = window.isAuthReady; // Will be updated by onAuthStateChanged
 
-        // DOM Elements
-        const els = {
-            setupSection: document.getElementById('setupSection'),
-            userConfig: document.getElementById('userConfig'),
-            adminPanel: document.getElementById('adminPanel'),
-            mainContent: document.getElementById('mainContent'),
-            supabaseUrl: document.getElementById('supabaseUrl'),
-            supabaseKey: document.getElementById('supabaseKey'),
-            connectBtn: document.getElementById('connectBtn'),
-            connectionStatus: document.getElementById('connectionStatus'),
-            userName: document.getElementById('userName'),
-            saveUserBtn: document.getElementById('saveUserBtn'),
-            adminBtn: document.getElementById('adminBtn'),
-            currentUser: document.querySelector('#currentUser span'),
-            adminPassword: document.getElementById('adminPassword'),
-            loginBtn: document.getElementById('loginBtn'),
-            reportSection: document.getElementById('reportSection'),
-            generateReportBtn: document.getElementById('generateReportBtn'),
-            exportBtn: document.getElementById('exportBtn'),
-            reportContent: document.getElementById('reportContent'),
-            monthYear: document.getElementById('monthYear'),
-            prevBtn: document.getElementById('prevBtn'),
-            nextBtn: document.getElementById('nextBtn'),
-            calendar: document.getElementById('calendar'),
-            startDate: document.getElementById('startDate'),
-            endDate: document.getElementById('endDate'),
-            title: document.getElementById('title'),
-            description: document.getElementById('description'),
-            category: document.getElementById('category'),
-            addBtn: document.getElementById('addBtn'),
-            eventsList: document.getElementById('eventsList'),
-            notification: document.getElementById('notification')
-        };
+        // DOM elemanlarını seçme
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const eventTitleInput = document.getElementById('eventTitle');
+        const eventDescriptionInput = document.getElementById('eventDescription');
+        const isHolidayCheckbox = document.getElementById('isHoliday');
+        const addEventBtn = document.getElementById('addEventBtn');
+        const eventListDiv = document.getElementById('eventList');
+        const noEventsMessage = document.getElementById('noEventsMessage');
+        const calendarDaysDiv = document.getElementById('calendarDays');
+        const currentMonthYearSpan = document.getElementById('currentMonthYear');
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
+        // const userIdDisplay = document.getElementById('userIdDisplay'); // Kaldırıldı
+        const messageBox = document.getElementById('messageBox'); // Get messageBox here for local use
 
-        // Utility Functions
-        function showNotification(message, type = 'info') {
-            els.notification.textContent = message;
-            els.notification.className = `notification ${type} show`;
-            setTimeout(() => {
-                els.notification.classList.remove('show');
-            }, 3000);
+        const userNameInput = document.getElementById('userNameInput');
+        const saveUserNameBtn = document.getElementById('saveUserNameBtn');
+        const displayedUserName = document.getElementById('displayedUserName');
+
+        let currentUserName = localStorage.getItem('userName') || ''; // Load user name from local storage
+
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        // allEvents and selectedDate are now managed globally in the head script, so no need to redeclare here.
+        // let allEvents = []; // To store all events fetched from Firestore
+        // let selectedDate = null; // To store the currently selected date in the calendar
+
+        // Function to show custom messages (now locally scoped if needed, but still using the global one)
+        function showMessage(message, duration = 3000) {
+            // Re-using the global showMessage from the head script, or define a local one if not available globally.
+            // For this structure, it's safer to ensure it's defined and used consistently.
+            // The global showMessage in the head script already handles messageBox existence.
+            window.showMessage(message, duration);
         }
 
-        function formatDate(date) {
-            return date.toISOString().split('T')[0];
-        }
-
-        function isToday(year, month, day) {
-            const today = new Date();
-            return year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
-        }
-
-        function isSameDay(date1, date2) {
-            return formatDate(date1) === formatDate(date2);
-        }
-
-        // Supabase Functions
-        async function connectToSupabase() {
-            const url = els.supabaseUrl.value.trim();
-            const key = els.supabaseKey.value.trim();
-            
-            if (!url || !key) {
-                showNotification('Lütfen URL ve API key girin', 'error');
-                return;
-            }
-
-            try {
-                els.connectionStatus.innerHTML = '<div class="spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div> Bağlanıyor...';
-                
-                state.supabase = window.supabase.createClient(url, key);
-                
-                // Test connection
-                const { data, error } = await state.supabase.from('events').select('count').limit(1);
-                if (error) throw error;
-                
-                // Save config
-                localStorage.setItem('supabaseUrl', url);
-                localStorage.setItem('supabaseKey', key);
-                
-                els.connectionStatus.innerHTML = '✅ Bağlantı başarılı!';
-                els.connectionStatus.className = 'mt-3 text-sm text-green-400';
-                els.userConfig.classList.remove('hidden');
-                
-                await loadEvents();
-                setupRealtime();
-                
-                showNotification('Supabase bağlantısı başarılı!', 'success');
-                
-            } catch (error) {
-                console.error('Connection error:', error);
-                els.connectionStatus.innerHTML = `❌ Hata: ${error.message}`;
-                els.connectionStatus.className = 'mt-3 text-sm text-red-400';
-                showNotification(`Bağlantı hatası: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEvents() {
-            if (!state.supabase) return;
-            
-            try {
-                const { data, error } = await state.supabase
-                    .from('events')
-                    .select('*')
-                    .order('start_date', { ascending: true });
-                
-                if (error) throw error;
-                
-                state.events = data || [];
-                renderCalendar();
-                renderEvents();
-                
-            } catch (error) {
-                console.error('Error loading events:', error);
-                showNotification('Etkinlikler yüklenirken hata oluştu', 'error');
-            }
-        }
-
-        function setupRealtime() {
-            if (!state.supabase) return;
-            
-            state.supabase
-                .channel('events')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-                    loadEvents();
-                })
-                .subscribe();
-        }
-
-        async function addEvent() {
-            if (!state.supabase || !state.currentUser) {
-                showNotification('Lütfen önce kurulumu tamamlayın', 'error');
-                return;
-            }
-            
-            const eventData = {
-                title: els.title.value.trim(),
-                start_date: els.startDate.value,
-                end_date: els.endDate.value,
-                description: els.description.value.trim() || null,
-                category: els.category.value,
-                is_holiday: els.category.value === 'tatil',
-                creator_name: state.currentUser
-            };
-            
-            if (!eventData.title || !eventData.start_date || !eventData.end_date) {
-                showNotification('Lütfen gerekli alanları doldurun', 'error');
-                return;
-            }
-            
-            if (new Date(eventData.start_date) > new Date(eventData.end_date)) {
-                showNotification('Bitiş tarihi başlangıçtan önce olamaz', 'error');
-                return;
-            }
-            
-            try {
-                const { error } = await state.supabase.from('events').insert([eventData]);
-                if (error) throw error;
-                
-                // Clear form
-                els.title.value = '';
-                els.description.value = '';
-                els.category.value = 'gorev';
-                
-                showNotification('Etkinlik eklendi!', 'success');
-                
-            } catch (error) {
-                console.error('Error adding event:', error);
-                showNotification('Etkinlik eklenirken hata oluştu', 'error');
-            }
-        }
-
-        async function deleteEvent(eventId) {
-            if (!state.supabase) return;
-            
-            try {
-                const { error } = await state.supabase.from('events').delete().eq('id', eventId);
-                if (error) throw error;
-                
-                showNotification('Etkinlik silindi!', 'success');
-                
-            } catch (error) {
-                console.error('Error deleting event:', error);
-                showNotification('Etkinlik silinirken hata oluştu', 'error');
-            }
-        }
-
-        // Calendar Functions
-        function renderCalendar() {
-            const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                               'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-            
-            els.monthYear.textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
-            
-            const firstDay = new Date(state.currentYear, state.currentMonth, 1);
-            const lastDay = new Date(state.currentYear, state.currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
-            
-            els.calendar.innerHTML = '';
-            
-            // Previous month days
-            const prevMonth = new Date(state.currentYear, state.currentMonth, 0);
-            for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-                const dayEl = createDayElement(prevMonth.getDate() - i, false);
-                els.calendar.appendChild(dayEl);
-            }
-            
-            // Current month days
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayEl = createDayElement(day, true);
-                els.calendar.appendChild(dayEl);
-            }
-            
-            // Next month days
-            const totalCells = els.calendar.children.length;
-            const remainingCells = 42 - totalCells;
-            for (let day = 1; day <= remainingCells; day++) {
-                const dayEl = createDayElement(day, false);
-                els.calendar.appendChild(dayEl);
-            }
-        }
-
-        function createDayElement(day, isCurrentMonth) {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'day';
-            
-            if (!isCurrentMonth) {
-                dayEl.classList.add('other-month');
-            }
-            
-            const dayNumber = document.createElement('div');
-            dayNumber.className = 'day-number';
-            dayNumber.textContent = day;
-            dayEl.appendChild(dayNumber);
-            
-            if (isCurrentMonth) {
-                const dateStr = `${state.currentYear}-${String(state.currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                // Check if today
-                if (isToday(state.currentYear, state.currentMonth, day)) {
-                    dayEl.classList.add('today');
-                }
-                
-                // Check if selected
-                if (state.selectedDate === dateStr) {
-                    dayEl.classList.add('selected');
-                }
-                
-                // Check for events
-                const dayEvents = state.events.filter(event => {
-                    const startDate = new Date(event.start_date);
-                    const endDate = new Date(event.end_date);
-                    const currentDate = new Date(dateStr);
-                    return currentDate >= startDate && currentDate <= endDate;
-                });
-                
-                if (dayEvents.length > 0) {
-                    // Find highest priority category
-                    let primaryCategory = 'gorev';
-                    for (const priority of CATEGORY_PRIORITY) {
-                        if (dayEvents.some(event => event.category === priority)) {
-                            primaryCategory = priority;
-                            break;
-                        }
-                    }
-                    dayEl.classList.add(`has-${primaryCategory}`);
-                    
-                    // Add dots
-                    const dotsEl = document.createElement('div');
-                    dotsEl.className = 'event-dots';
-                    
-                    const categories = [...new Set(dayEvents.map(event => event.category))];
-                    categories.slice(0, 4).forEach(cat => {
-                        const dot = document.createElement('div');
-                        dot.className = `dot ${cat}`;
-                        dotsEl.appendChild(dot);
-                    });
-                    
-                    dayEl.appendChild(dotsEl);
-                }
-                
-                // Click handler
-                dayEl.addEventListener('click', () => {
-                    state.selectedDate = dateStr;
-                    els.startDate.value = dateStr;
-                    els.endDate.value = dateStr;
-                    renderCalendar();
-                    renderEvents();
-                });
-            }
-            
-            return dayEl;
-        }
-
-        function changeMonth(direction) {
-            state.currentMonth += direction;
-            if (state.currentMonth < 0) {
-                state.currentMonth = 11;
-                state.currentYear--;
-            } else if (state.currentMonth > 11) {
-                state.currentMonth = 0;
-                state.currentYear++;
-            }
-            state.selectedDate = null;
-            renderCalendar();
-            renderEvents();
-        }
-
-        // Events List
-        function renderEvents() {
-            let filteredEvents = state.events;
-            
-            if (state.selectedDate) {
-                filteredEvents = state.events.filter(event => {
-                    const startDate = new Date(event.start_date);
-                    const endDate = new Date(event.end_date);
-                    const selectedDateObj = new Date(state.selectedDate);
-                    return selectedDateObj >= startDate && selectedDateObj <= endDate;
-                });
-            }
-            
-            if (filteredEvents.length === 0) {
-                els.eventsList.innerHTML = '<div class="text-white/60 text-center py-8">Henüz etkinlik yok</div>';
-                return;
-            }
-            
-            filteredEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-            
-            els.eventsList.innerHTML = '';
-            
-            filteredEvents.forEach(event => {
-                const eventEl = document.createElement('div');
-                eventEl.className = 'event-card fade-in';
-                
-                const categoryInfo = CATEGORY_INFO[event.category] || CATEGORY_INFO.gorev;
-                const startDate = new Date(event.start_date);
-                const endDate = new Date(event.end_date);
-                const isSameDay = event.start_date === event.end_date;
-                
-                const dateText = isSameDay 
-                    ? startDate.toLocaleDateString('tr-TR')
-                    : `${startDate.toLocaleDateString('tr-TR')} - ${endDate.toLocaleDateString('tr-TR')}`;
-                
-                eventEl.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-2">
-                                <h4 class="font-semibold text-gray-800">${event.title}</h4>
-                                <span class="category-badge badge-${event.category}">
-                                    ${categoryInfo.icon} ${categoryInfo.name}
-                                </span>
-                            </div>
-                            <p class="text-sm text-gray-600 mb-1">📅 ${dateText}</p>
-                            ${event.description ? `<p class="text-sm text-gray-700 mb-2">${event.description}</p>` : ''}
-                            <p class="text-xs text-gray-500">👤 ${event.creator_name}</p>
-                        </div>
-                        <button onclick="deleteEvent('${event.id}')" class="btn btn-danger p-2 ml-3">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-                
-                els.eventsList.appendChild(eventEl);
-            });
-        }
-
-        // Admin Functions
-        function generateReport() {
-            if (!state.events.length) {
-                showNotification('Henüz etkinlik yok', 'error');
-                return;
-            }
-            
-            const userStats = {};
-            state.events.forEach(event => {
-                const creator = event.creator_name || 'Bilinmiyor';
-                if (!userStats[creator]) {
-                    userStats[creator] = { total: 0, ...Object.fromEntries(Object.keys(CATEGORY_INFO).map(k => [k, 0])) };
-                }
-                userStats[creator].total++;
-                userStats[creator][event.category || 'gorev']++;
-            });
-            
-            const sortedUsers = Object.entries(userStats).sort((a, b) => b[1].total - a[1].total);
-            
-            let reportHTML = `
-                <div class="glass rounded-xl p-4">
-                    <h4 class="text-lg font-semibold text-white mb-4">📊 Kullanıcı Görev İstatistikleri</h4>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-white">
-                            <thead>
-                                <tr class="border-b border-white/20">
-                                    <th class="text-left py-2">Kullanıcı</th>
-                                    <th class="text-center py-2">Toplam</th>
-                                    <th class="text-center py-2">🏛️</th>
-                                    <th class="text-center py-2">🏢</th>
-                                    <th class="text-center py-2">🏖️</th>
-                                    <th class="text-center py-2">🤝</th>
-                                    <th class="text-center py-2">🎉</th>
-                                    <th class="text-center py-2">📋</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-            `;
-            
-            sortedUsers.forEach(([user, stats]) => {
-                reportHTML += `
-                    <tr class="border-b border-white/10">
-                        <td class="py-2 font-medium">${user}</td>
-                        <td class="text-center py-2 font-bold">${stats.total}</td>
-                        <td class="text-center py-2">${stats.rektorluk}</td>
-                        <td class="text-center py-2">${stats.fakulte}</td>
-                        <td class="text-center py-2">${stats.tatil}</td>
-                        <td class="text-center py-2">${stats.toplanti}</td>
-                        <td class="text-center py-2">${stats.etkinlik}</td>
-                        <td class="text-center py-2">${stats.gorev}</td>
-                    </tr>
-                `;
-            });
-            
-            reportHTML += `
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-4 text-xs text-white/60 text-center">
-                        Rapor tarihi: ${new Date().toLocaleString('tr-TR')}
-                    </div>
-                </div>
-            `;
-            
-            els.reportContent.innerHTML = reportHTML;
-        }
-
-        function exportToExcel() {
-            if (!state.events.length) {
-                showNotification('Henüz etkinlik yok', 'error');
-                return;
-            }
-            
-            let csvContent = "Kullanıcı,Başlık,Kategori,Başlangıç,Bitiş,Açıklama\n";
-            
-            state.events.forEach(event => {
-                const row = [
-                    event.creator_name || 'Bilinmiyor',
-                    event.title,
-                    CATEGORY_INFO[event.category]?.name || 'Bilinmiyor',
-                    event.start_date,
-                    event.end_date,
-                    (event.description || '').replace(/,/g, ';')
-                ];
-                csvContent += row.join(',') + '\n';
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `ogretmen_takvimi_${formatDate(new Date())}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showNotification('Excel dosyası indirildi!', 'success');
-        }
+        // Sayfa yüklendiğinde ve Firebase hazır olduğunda etkinlikleri yükle
+        // This function is now defined in the head script, so we just need to ensure it's called.
+        // The onAuthStateChanged listener in the head script already calls window.loadEvents().
 
         // Event Listeners
-        els.connectBtn.addEventListener('click', connectToSupabase);
-        
-        els.saveUserBtn.addEventListener('click', () => {
-            const name = els.userName.value.trim();
-            if (name) {
-                state.currentUser = name;
-                localStorage.setItem('teacherName', name);
-                els.currentUser.textContent = name;
-                els.mainContent.classList.remove('hidden');
-                showNotification('Kullanıcı adı kaydedildi!', 'success');
-            } else {
-                showNotification('Lütfen bir isim girin', 'error');
-            }
-        });
-        
-        els.adminBtn.addEventListener('click', () => {
-            els.adminPanel.classList.remove('hidden');
-        });
-        
-        els.loginBtn.addEventListener('click', () => {
-            const password = els.adminPassword.value.trim();
-            if (password === ADMIN_PASSWORD) {
-                state.isAdmin = true;
-                localStorage.setItem('isAdmin', 'true');
-                els.reportSection.classList.remove('hidden');
-                els.adminPassword.value = '';
-                showNotification('Yönetici girişi başarılı!', 'success');
-            } else {
-                showNotification('Hatalı şifre!', 'error');
-            }
-        });
-        
-        els.generateReportBtn.addEventListener('click', generateReport);
-        els.exportBtn.addEventListener('click', exportToExcel);
-        
-        els.prevBtn.addEventListener('click', () => changeMonth(-1));
-        els.nextBtn.addEventListener('click', () => changeMonth(1));
-        
-        els.addBtn.addEventListener('click', addEvent);
-        
-        // Make deleteEvent global
-        window.deleteEvent = deleteEvent;
-
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Set today's date
-            const today = formatDate(new Date());
-            els.startDate.value = today;
-            els.endDate.value = today;
+            // Set default dates to today for the input fields
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayFormatted = `${year}-${month}-${day}`;
             
-            // Load saved config
-            const savedUrl = localStorage.getItem('supabaseUrl');
-            const savedKey = localStorage.getItem('supabaseKey');
-            if (savedUrl && savedKey) {
-                els.supabaseUrl.value = savedUrl;
-                els.supabaseKey.value = savedKey;
-                connectToSupabase();
+            startDateInput.value = todayFormatted;
+            endDateInput.value = todayFormatted; // End date defaults to start date
+
+            // Display initial user name
+            if (currentUserName) {
+                userNameInput.value = currentUserName;
+                displayedUserName.textContent = currentUserName;
+            } else {
+                displayedUserName.textContent = 'Henüz Ayarlanmadı';
             }
-            
-            // Load saved user
-            if (state.currentUser) {
-                els.userName.value = state.currentUser;
-                els.currentUser.textContent = state.currentUser;
-            }
-            
-            // Show admin panel if already admin
-            if (state.isAdmin) {
-                els.reportSection.classList.remove('hidden');
-            }
-            
+
+            // Initial render of calendar (will be updated by loadEvents once data arrives)
             renderCalendar();
+
+            // No explicit call to loadEvents here, relying on onAuthStateChanged in head script
+            // to call window.loadEvents() once authentication is complete.
         });
+
+        addEventBtn.addEventListener('click', addEvent);
+        saveUserNameBtn.addEventListener('click', () => {
+            const newUserName = userNameInput.value.trim();
+            if (newUserName) {
+                localStorage.setItem('userName', newUserName);
+                currentUserName = newUserName;
+                displayedUserName.textContent = currentUserName;
+                showMessage('Kullanıcı adınız kaydedildi!', 2000);
+            } else {
+                showMessage('Lütfen geçerli bir kullanıcı adı girin.', 3000);
+            }
+        });
+
+        prevMonthBtn.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+            window.selectedDate = null; // Clear selected date when changing month
+            renderEvents(window.allEvents, window.selectedDate); // Use global allEvents
+        });
+        nextMonthBtn.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+            window.selectedDate = null; // Clear selected date when changing month
+            renderEvents(window.allEvents, window.selectedDate); // Use global allEvents
+        });
+
+        /**
+         * Yeni bir etkinlik veya görev ekler ve Firestore'a kaydeder.
+         */
+        async function addEvent() {
+            // Use global flags for Firebase readiness
+            if (!window.isAuthReady || !window.currentUserId || !window.firebaseDb) {
+                showMessage("Uygulama henüz hazır değil veya kimlik doğrulama tamamlanmadı. Lütfen bekleyin.", 4000);
+                console.warn("Attempted to add event before Firebase was ready. isAuthReady:", window.isAuthReady, "currentUserId:", window.currentUserId, "firebaseDb:", window.firebaseDb);
+                return;
+            }
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            const title = eventTitleInput.value.trim();
+            const description = eventDescriptionInput.value.trim();
+            const isHoliday = isHolidayCheckbox.checked;
+            const userName = currentUserName || 'Bilinmiyor'; // Use stored user name or fallback
+
+            if (!startDate || !endDate || !title) {
+                showMessage('Lütfen başlangıç tarihi, bitiş tarihi ve başlık alanlarını doldurun.', 3000);
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessage('Bitiş tarihi başlangıç tarihinden önce olamaz.', 3000);
+                return;
+            }
+
+            const event = {
+                startDate: startDate,
+                endDate: endDate,
+                title: title,
+                description: description,
+                isHoliday: isHoliday,
+                createdAt: new Date().toISOString(), // Add timestamp
+                createdBy: window.currentUserId, // Track who created it (Firebase UID)
+                creatorName: userName // Track who created it (User provided name)
+            };
+
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const eventsCollectionRef = collection(window.firebaseDb, `artifacts/${appId}/public/data/calendarEvents`);
+                await addDoc(eventsCollectionRef, event);
+                showMessage('Görev/Etkinlik başarıyla eklendi!', 3000);
+                // Clear form
+                eventTitleInput.value = '';
+                eventDescriptionInput.value = '';
+                isHolidayCheckbox.checked = false;
+                // No need to call renderEvents explicitly, onSnapshot will handle it
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showMessage('Görev/Etkinlik eklenirken bir hata oluştu.', 5000);
+            }
+        }
+
+        /**
+         * Bir etkinliği Firestore'dan siler.
+         * @param {Event} e - Tıklama olayı.
+         */
+        async function deleteEvent(e) {
+            if (!window.isAuthReady || !window.currentUserId || !window.firebaseDb) {
+                showMessage("Uygulama henüz hazır değil veya kimlik doğrulama tamamlanmadı. Lütfen bekleyin.", 4000);
+                console.warn("Attempted to delete event before Firebase was ready. isAuthReady:", window.isAuthReady, "currentUserId:", window.currentUserId, "firebaseDb:", window.firebaseDb);
+                return;
+            }
+
+            const eventId = e.currentTarget.dataset.id;
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                await deleteDoc(doc(window.firebaseDb, `artifacts/${appId}/public/data/calendarEvents`, eventId));
+                showMessage('Görev/Etkinlik başarıyla silindi!', 3000);
+                // No need to call renderEvents explicitly, onSnapshot will handle it
+            } catch (e) {
+                console.error("Error removing document: ", e);
+                showMessage('Görev/Etkinlik silinirken bir hata oluştu.', 5000);
+            }
+        }
+
+        /**
+         * Etkinlikleri sayfada listeler.
+         * Tarihe göre gruplandırır ve sıralar.
+         * @param {Array} events - Listelenecek tüm etkinlikler dizisi.
+         * @param {string} filterDate - Filtrelenecek tarih (YYYY-MM-DD formatında), null ise tümü.
+         */
+        function renderEvents(eventsToRender, filterDate = null) {
+            const eventListDiv = document.getElementById('eventList');
+            const noEventsMessage = document.getElementById('noEventsMessage');
+
+            if (!eventListDiv || !noEventsMessage) {
+                console.warn("Event list DOM elements not found during renderEvents. Skipping render.");
+                return;
+            }
+
+            eventListDiv.innerHTML = ''; // Mevcut listeyi temizle
+
+            let filteredEvents = eventsToRender;
+            if (filterDate) {
+                // Filter events that span the selected date
+                filteredEvents = eventsToRender.filter(event => {
+                    const eventStartDate = new Date(event.startDate);
+                    const eventEndDate = new Date(event.endDate);
+                    const filterDateObj = new Date(filterDate);
+                    // Set hours to 0 for accurate date comparison
+                    eventStartDate.setHours(0,0,0,0);
+                    eventEndDate.setHours(0,0,0,0);
+                    filterDateObj.setHours(0,0,0,0);
+                    return filterDateObj >= eventStartDate && filterDateObj <= eventEndDate;
+                });
+            }
+
+            if (filteredEvents.length === 0) {
+                noEventsMessage.style.display = 'block';
+                eventListDiv.appendChild(noEventsMessage);
+                return;
+            } else {
+                noEventsMessage.style.display = 'none';
+            }
+
+            // Etkinlikleri başlangıç tarihine ve ardından başlığa göre sırala
+            filteredEvents.sort((a, b) => {
+                if (a.startDate === b.startDate) {
+                    return a.title.localeCompare(b.title);
+                }
+                return new Date(a.startDate) - new Date(b.startDate);
+            });
+
+            // Tarihe göre gruplandır (başlangıç tarihine göre)
+            const groupedEvents = filteredEvents.reduce((acc, event) => {
+                (acc[event.startDate] = acc[event.startDate] || []).push(event);
+                return acc;
+            }, {});
+
+            for (const date in groupedEvents) {
+                const dateHeader = document.createElement('h3');
+                dateHeader.className = 'text-lg font-semibold text-gray-800 mt-4 mb-2 border-b pb-1';
+                dateHeader.textContent = new Date(date).toLocaleDateString('tr-TR', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                eventListDiv.appendChild(dateHeader);
+
+                groupedEvents[date].forEach(event => {
+                    const eventCard = document.createElement('div');
+                    eventCard.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-start';
+                    // Display creatorName if available, else fallback to full createdBy UID
+                    const creatorInfo = event.creatorName || event.createdBy || 'Bilinmiyor';
+                    const dateRange = (event.startDate === event.endDate) ?
+                                      new Date(event.startDate).toLocaleDateString('tr-TR') :
+                                      `${new Date(event.startDate).toLocaleDateString('tr-TR')} - ${new Date(event.endDate).toLocaleDateString('tr-TR')}`;
+                    const holidayTag = event.isHoliday ? '<span class="ml-2 px-2 py-0.5 bg-green-200 text-green-800 text-xs font-semibold rounded-full">TATİL</span>' : '';
+
+                    eventCard.innerHTML = `
+                        <div>
+                            <p class="text-md font-medium text-gray-900">${event.title} ${holidayTag}</p>
+                            <p class="text-sm text-gray-700 mt-1">Tarih: ${dateRange}</p>
+                            ${event.description ? `<p class="text-sm text-gray-600 mt-1">${event.description}</p>` : ''}
+                            <p class="text-xs text-gray-400 mt-1">Ekleyen: ${creatorInfo}</p>
+                        </div>
+                        <button data-id="${event.id}" class="delete-btn text-red-500 hover:text-red-700 ml-4 p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    `;
+                    eventListDiv.appendChild(eventCard);
+                });
+            }
+
+            // Silme butonlarına olay dinleyicisi ekle
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', deleteEvent);
+            });
+        }
+
+        /**
+         * Takvimi oluşturur ve günleri işaretler.
+         */
+        function renderCalendar() {
+            const calendarDaysDiv = document.getElementById('calendarDays');
+            const currentMonthYearSpan = document.getElementById('currentMonthYear');
+            if (!calendarDaysDiv || !currentMonthYearSpan) {
+                console.warn("Calendar DOM elements not found during renderCalendar. Skipping render.");
+                return;
+            }
+
+            calendarDaysDiv.innerHTML = '';
+            currentMonthYearSpan.textContent = new Date(currentYear, currentMonth).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); // Get last day of month
+            const firstDayOfWeek = (firstDayOfMonth.getDay() === 0) ? 6 : firstDayOfMonth.getDay() - 1; // Adjust for Monday start (0=Sunday, 1=Monday... 6=Saturday)
+
+            // Calculate days from previous month to fill the first week
+            const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day other-month';
+                dayDiv.textContent = prevMonthDays - i;
+                calendarDaysDiv.appendChild(dayDiv);
+            }
+
+            // Render current month days
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDiv = document.createElement('div');
+                const currentDate = new Date(currentYear, currentMonth, i);
+                const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+
+                dayDiv.className = 'calendar-day current-month';
+
+                const dayNumberSpan = document.createElement('span');
+                dayNumberSpan.className = 'day-number';
+                dayNumberSpan.textContent = i;
+                dayDiv.appendChild(dayNumberSpan);
+
+                // Add event dot if there are events that span this day
+                const eventsOnThisDay = window.allEvents.filter(event => { // Use global allEvents
+                    const eventStartDate = new Date(event.startDate);
+                    const eventEndDate = new Date(event.endDate);
+                    const currentDateObj = new Date(formattedDate);
+                    // Set hours to 0 for accurate date comparison
+                    eventStartDate.setHours(0,0,0,0);
+                    eventEndDate.setHours(0,0,0,0);
+                    currentDateObj.setHours(0,0,0,0);
+                    // Check if currentDateObj is within the event's start and end date (inclusive)
+                    return currentDateObj >= eventStartDate && currentDateObj <= eventEndDate;
+                });
+
+                if (eventsOnThisDay.length > 0) {
+                    const eventDot = document.createElement('div');
+                    eventDot.className = 'event-dot'; // Default dot (red)
+                    // Check if any of the events on this day are holidays
+                    const isAnyHoliday = eventsOnThisDay.some(event => event.isHoliday);
+                    if (isAnyHoliday) {
+                        eventDot.classList.add('holiday-dot'); // Add green dot for holidays
+                    }
+                    dayDiv.appendChild(eventDot);
+                    dayDiv.classList.add('has-event');
+                }
+
+                // Highlight today
+                const today = new Date();
+                if (currentDate.getDate() === today.getDate() &&
+                    currentDate.getMonth() === today.getMonth() &&
+                    currentDate.getFullYear() === today.getFullYear()) {
+                    dayDiv.classList.add('today');
+                }
+
+                // Highlight selected date
+                if (window.selectedDate === formattedDate) { // Use global selectedDate
+                    dayDiv.classList.add('selected-date');
+                }
+
+                dayDiv.dataset.date = formattedDate; // Store full date for selection
+                dayDiv.addEventListener('click', () => {
+                    window.selectedDate = formattedDate; // Update global selectedDate
+                    startDateInput.value = formattedDate; // Update form start date input
+                    endDateInput.value = formattedDate; // Update form end date input to selected date
+                    renderCalendar(); // Re-render to highlight selected date
+                    renderEvents(window.allEvents, window.selectedDate); // Filter events for selected date
+                });
+
+                calendarDaysDiv.appendChild(dayDiv);
+            }
+
+            // Calculate days from next month to fill the last week
+            const totalDaysRendered = firstDayOfWeek + daysInMonth;
+            const remainingCells = 42 - totalDaysRendered; // 6 weeks * 7 days = 42 cells
+            for (let i = 1; i <= remainingCells; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day other-month';
+                dayDiv.textContent = i;
+                calendarDaysDiv.appendChild(dayDiv);
+            }
+        }
     </script>
 </body>
 </html>
