@@ -1,4 +1,21 @@
-<!DOCTYPE html>
+// Make deleteEvent globally accessible
+        window.deleteEvent = deleteEvent;        <!-- User Section -->
+        <div id="userSection" class="glass rounded-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-semibold text-white mb-4">👤 Kullanıcı Bilgisi</h2>
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <input type="text" id="userNameInput" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" 
+                       class="input-focus flex-1 px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                <button id="saveUserBtn" class="btn-hover bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
+                    💾 Kaydet
+                </button>
+                <button id="showAdminBtn" class="btn-hover bg-gradient-to-r from-gray-500 to-gray-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
+                    🔐 Yönetici
+                </button>
+            </div>
+            <p id="currentUser" class="text-white/80 mt-3 text-center">
+                Mevcut kullanıcı: <span class="font-semibold text-white">Belirtilmedi</span>
+            </p>
+        </div>                    <!-- Events List --><!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -242,8 +259,33 @@
             </div>
         </div>
 
-        <!-- User Section -->
-        <div id="userSection" class="glass rounded-2xl p-6 mb-8 hidden">
+        <!-- Admin Section -->
+        <div id="adminSection" class="glass rounded-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-semibold text-white mb-4">📊 Yönetici Paneli</h2>
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <input type="password" id="adminPassword" placeholder="Yönetici şifresi" 
+                       class="input-focus flex-1 px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 text-gray-800">
+                <button id="loginAdminBtn" class="btn-hover bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
+                    🔐 Giriş Yap
+                </button>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reportsSection" class="glass rounded-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-semibold text-white mb-4">📈 Görev Raporları</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <button id="generateReportBtn" class="btn-hover bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
+                    📊 Rapor Oluştur
+                </button>
+                <button id="exportReportBtn" class="btn-hover bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
+                    📑 Excel'e Aktar
+                </button>
+            </div>
+            <div id="reportContent" class="glass rounded-xl p-4 hidden">
+                <!-- Rapor içeriği buraya gelecek -->
+            </div>
+        </div>
             <h2 class="text-xl font-semibold text-white mb-4">👤 Kullanıcı Bilgisi</h2>
             <div class="flex flex-col md:flex-row items-center gap-4">
                 <input type="text" id="userNameInput" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" 
@@ -402,15 +444,25 @@
         let selectedDate = null;
         let events = [];
         let isConnected = false;
+        let isAdmin = localStorage.getItem('isAdmin') === 'true';
+        const ADMIN_PASSWORD = 'admin123'; // Değiştir!
 
         // DOM elements
         const configSection = document.getElementById('configSection');
         const userSection = document.getElementById('userSection');
+        const adminSection = document.getElementById('adminSection');
+        const reportsSection = document.getElementById('reportsSection');
         const mainContent = document.getElementById('mainContent');
         const connectBtn = document.getElementById('connectBtn');
         const connectionStatus = document.getElementById('connectionStatus');
         const userNameInput = document.getElementById('userNameInput');
         const saveUserBtn = document.getElementById('saveUserBtn');
+        const showAdminBtn = document.getElementById('showAdminBtn');
+        const adminPassword = document.getElementById('adminPassword');
+        const loginAdminBtn = document.getElementById('loginAdminBtn');
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        const exportReportBtn = document.getElementById('exportReportBtn');
+        const reportContent = document.getElementById('reportContent');
         const currentUserSpan = document.querySelector('#currentUser span');
         const calendarDays = document.getElementById('calendarDays');
         const currentMonthYear = document.getElementById('currentMonthYear');
@@ -438,6 +490,11 @@
             if (currentUser) {
                 userNameInput.value = currentUser;
                 currentUserSpan.textContent = currentUser;
+            }
+
+            // Check admin status
+            if (isAdmin) {
+                reportsSection.classList.remove('hidden');
             }
 
             // Check for saved Supabase config
@@ -546,6 +603,27 @@
             }
         });
 
+        showAdminBtn.addEventListener('click', () => {
+            adminSection.classList.remove('hidden');
+        });
+
+        loginAdminBtn.addEventListener('click', () => {
+            const password = adminPassword.value.trim();
+            if (password === ADMIN_PASSWORD) {
+                isAdmin = true;
+                localStorage.setItem('isAdmin', 'true');
+                adminSection.classList.add('hidden');
+                reportsSection.classList.remove('hidden');
+                showNotification('Yönetici girişi başarılı!', 'success');
+                adminPassword.value = '';
+            } else {
+                showNotification('Hatalı şifre!', 'error');
+            }
+        });
+
+        generateReportBtn.addEventListener('click', generateReport);
+        exportReportBtn.addEventListener('click', exportToExcel);
+
         prevMonth.addEventListener('click', () => {
             currentMonth--;
             if (currentMonth < 0) {
@@ -628,6 +706,9 @@
                 
                 if (error) throw error;
                 
+                // Optimistic update - hemen UI'ı güncelle
+                await loadEvents();
+                
                 // Clear form
                 eventTitle.value = '';
                 eventDescription.value = '';
@@ -652,6 +733,9 @@
                     .eq('id', eventId);
                 
                 if (error) throw error;
+                
+                // Optimistic update - hemen UI'ı güncelle  
+                await loadEvents();
                 
                 showNotification('Etkinlik silindi!', 'success');
                 
@@ -854,8 +938,118 @@
             });
         }
 
-        // Make deleteEvent globally accessible
-        window.deleteEvent = deleteEvent;
+        // Generate report function
+        function generateReport() {
+            if (!events.length) {
+                showNotification('Henüz etkinlik yok', 'error');
+                return;
+            }
+
+            // Kullanıcıya göre grupla
+            const userStats = {};
+            events.forEach(event => {
+                const creator = event.creator_name || 'Bilinmiyor';
+                if (!userStats[creator]) {
+                    userStats[creator] = {
+                        total: 0,
+                        gorev: 0,
+                        fakulte: 0,
+                        rektorluk: 0,
+                        tatil: 0,
+                        toplanti: 0,
+                        etkinlik: 0
+                    };
+                }
+                userStats[creator].total++;
+                userStats[creator][event.category || 'gorev']++;
+            });
+
+            // Rapor HTML'i oluştur
+            let reportHTML = `
+                <h3 class="text-lg font-semibold text-white mb-4">📊 Kullanıcı Görev İstatistikleri</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-white">
+                        <thead>
+                            <tr class="border-b border-white/20">
+                                <th class="text-left py-2">Kullanıcı</th>
+                                <th class="text-center py-2">Toplam</th>
+                                <th class="text-center py-2">📋 Görev</th>
+                                <th class="text-center py-2">🏢 Fakülte</th>
+                                <th class="text-center py-2">🏛️ Rektörlük</th>
+                                <th class="text-center py-2">🏖️ Tatil</th>
+                                <th class="text-center py-2">🤝 Toplantı</th>
+                                <th class="text-center py-2">🎉 Etkinlik</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            // Toplam görev sayısına göre sırala
+            const sortedUsers = Object.entries(userStats).sort((a, b) => b[1].total - a[1].total);
+
+            sortedUsers.forEach(([user, stats]) => {
+                reportHTML += `
+                    <tr class="border-b border-white/10">
+                        <td class="py-2 font-medium">${user}</td>
+                        <td class="text-center py-2 font-bold">${stats.total}</td>
+                        <td class="text-center py-2">${stats.gorev}</td>
+                        <td class="text-center py-2">${stats.fakulte}</td>
+                        <td class="text-center py-2">${stats.rektorluk}</td>
+                        <td class="text-center py-2">${stats.tatil}</td>
+                        <td class="text-center py-2">${stats.toplanti}</td>
+                        <td class="text-center py-2">${stats.etkinlik}</td>
+                    </tr>
+                `;
+            });
+
+            reportHTML += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-xs text-white/60">
+                    Rapor oluşturulma tarihi: ${new Date().toLocaleString('tr-TR')}
+                </div>
+            `;
+
+            reportContent.innerHTML = reportHTML;
+            reportContent.classList.remove('hidden');
+        }
+
+        // Export to Excel function
+        function exportToExcel() {
+            if (!events.length) {
+                showNotification('Henüz etkinlik yok', 'error');
+                return;
+            }
+
+            // CSV formatında veri hazırla
+            let csvContent = "Kullanıcı,Başlık,Kategori,Başlangıç,Bitiş,Açıklama\n";
+            
+            events.forEach(event => {
+                const row = [
+                    event.creator_name || 'Bilinmiyor',
+                    event.title,
+                    event.category || 'gorev',
+                    event.start_date,
+                    event.end_date,
+                    (event.description || '').replace(/,/g, ';')
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+
+            // Dosya indir
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `ogretmen_takvimi_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification('Rapor Excel dosyası olarak indirildi!', 'success');
+        }
     </script>
 </body>
 </html>
