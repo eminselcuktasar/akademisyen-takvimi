@@ -1,342 +1,329 @@
-// Make deleteEvent globally accessible
-        window.deleteEvent = deleteEvent;        <!-- User Section -->
-        <div id="userSection" class="glass rounded-2xl p-6 mb-8 hidden">
-            <h2 class="text-xl font-semibold text-white mb-4">👤 Kullanıcı Bilgisi</h2>
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <input type="text" id="userNameInput" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" 
-                       class="input-focus flex-1 px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
-                <button id="saveUserBtn" class="btn-hover bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    💾 Kaydet
-                </button>
-                <button id="showAdminBtn" class="btn-hover bg-gradient-to-r from-gray-500 to-gray-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    🔐 Yönetici
-                </button>
-            </div>
-            <p id="currentUser" class="text-white/80 mt-3 text-center">
-                Mevcut kullanıcı: <span class="font-semibold text-white">Belirtilmedi</span>
-            </p>
-        </div>                    <!-- Events List --><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Öğretmen Takvimi</title>
+    <title>Akademisyen Takvimi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            margin: 0;
+            padding: 20px;
         }
         
         .glass {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
         
-        .calendar-day {
-            padding: 12px 8px;
-            text-align: center;
+        /* Takvim */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 4px;
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 60px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            position: relative;
             background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid transparent;
+            min-height: 80px;
         }
         
-        .calendar-day.current-month {
-            background: rgba(255, 255, 255, 0.9);
-            color: #1f2937;
+        .day:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
         
-        .calendar-day.other-month {
+        .day.other-month {
             background: rgba(255, 255, 255, 0.3);
             color: #9ca3af;
         }
         
-        .calendar-day.today {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        .day.today {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            font-weight: bold;
         }
         
-        .calendar-day.has-gorev {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        .day.selected {
+            border-color: #8b5cf6;
+            background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
         }
         
-        .calendar-day.has-fakulte {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-        
-        .calendar-day.has-rektorluk {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-            color: white;
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-        }
-        
-        .calendar-day.has-tatil {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-        }
-        
-        .calendar-day.has-toplanti {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            color: white;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-        }
-        
-        .calendar-day.has-etkinlik {
-            background: linear-gradient(135deg, #ec4899, #db2777);
-            color: white;
-            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
-        }
-        
-        .calendar-day.selected-date {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            color: white;
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
-        }
-        
-        .calendar-day:hover:not(.selected-date):not(.today) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            background: rgba(255, 255, 255, 0.95);
-        }
+        /* Kategori renkleri */
+        .day.has-rektorluk { background: linear-gradient(135deg, #fecaca, #f87171); }
+        .day.has-fakulte { background: linear-gradient(135deg, #bbf7d0, #4ade80); }
+        .day.has-tatil { background: linear-gradient(135deg, #fed7aa, #fb923c); }
+        .day.has-toplanti { background: linear-gradient(135deg, #e9d5ff, #a855f7); }
+        .day.has-etkinlik { background: linear-gradient(135deg, #fbcfe8, #ec4899); }
+        .day.has-gorev { background: linear-gradient(135deg, #dbeafe, #60a5fa); }
         
         .day-number {
+            font-size: 16px;
             font-weight: 600;
-            font-size: 1.1rem;
             margin-bottom: 4px;
         }
         
-        .event-dot.gorev {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        .event-dots {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
-        .event-dot.fakulte {
-            background: linear-gradient(135deg, #10b981, #059669);
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            opacity: 0.8;
         }
         
-        .event-dot.rektorluk {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-        }
+        .dot.rektorluk { background: #dc2626; }
+        .dot.fakulte { background: #16a34a; }
+        .dot.tatil { background: #ea580c; }
+        .dot.toplanti { background: #9333ea; }
+        .dot.etkinlik { background: #db2777; }
+        .dot.gorev { background: #2563eb; }
         
-        .event-dot.tatil {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-        
-        .event-dot.toplanti {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-        }
-        
-        .event-dot.etkinlik {
-            background: linear-gradient(135deg, #ec4899, #db2777);
-        }
-        
-        .btn-hover {
-            transition: all 0.3s ease;
-        }
-        .btn-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-        
-        .event-card {
-            transition: all 0.3s ease;
+        /* Form elemanları */
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
+            font-size: 14px;
+            transition: all 0.3s ease;
         }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .btn-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
+        
+        /* Event cards */
+        .event-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        
         .event-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
         
-        .input-focus {
-            transition: all 0.3s ease;
-        }
-        .input-focus:focus {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
-        }
-        
-        .floating {
-            animation: float 6s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
         }
         
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .badge-rektorluk { background: #dc2626; }
+        .badge-fakulte { background: #16a34a; }
+        .badge-tatil { background: #ea580c; }
+        .badge-toplanti { background: #9333ea; }
+        .badge-etkinlik { background: #db2777; }
+        .badge-gorev { background: #2563eb; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .day { min-height: 60px; padding: 4px 2px; }
+            .day-number { font-size: 14px; }
+            .main-grid { grid-template-columns: 1fr; gap: 20px; }
         }
+        
+        /* Animasyonlar */
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .spin { animation: spin 1s linear infinite; }
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         
-        .scrollbar-hide::-webkit-scrollbar {
-            width: 6px;
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
         }
-        .scrollbar-hide::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        .scrollbar-hide::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-        }
+        
+        .notification.show { transform: translateX(0); }
+        .notification.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .notification.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .notification.info { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        
+        .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 30px; }
+        .scrollable { max-height: 400px; overflow-y: auto; }
+        .scrollable::-webkit-scrollbar { width: 6px; }
+        .scrollable::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <!-- Background decorations -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="floating absolute top-20 left-20 w-32 h-32 bg-white opacity-10 rounded-full"></div>
-        <div class="floating absolute top-40 right-32 w-24 h-24 bg-white opacity-5 rounded-full" style="animation-delay: -2s;"></div>
-        <div class="floating absolute bottom-32 left-1/4 w-16 h-16 bg-white opacity-15 rounded-full" style="animation-delay: -4s;"></div>
-    </div>
-
-    <!-- Notification -->
-    <div id="notification" class="fixed top-4 right-4 z-50 hidden glass text-white px-6 py-3 rounded-lg shadow-lg">
-        <span id="notificationText"></span>
-    </div>
-
-    <div class="glass rounded-3xl shadow-2xl w-full max-w-7xl p-8 relative">
+<body>
+    <div class="container">
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-4xl font-bold text-white mb-2">📅 Öğretmen Takvimi</h1>
-            <p class="text-white/80 text-lg">Görevler ve Tatiller</p>
+            <p class="text-white/80 text-lg">Görev ve Tatil Yönetimi</p>
         </div>
 
-        <!-- Configuration Section -->
-        <div id="configSection" class="glass rounded-2xl p-6 mb-8">
-            <h2 class="text-xl font-semibold text-white mb-4">⚙️ Supabase Ayarları</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-white/80 text-sm font-medium mb-2">Supabase URL</label>
-                    <input type="url" id="supabaseUrl" placeholder="https://xyz.supabase.co" 
-                           class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+        <!-- Setup Section -->
+        <div id="setupSection" class="glass rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold text-white mb-6">⚙️ Kurulum</h2>
+            
+            <!-- Supabase Config -->
+            <div id="supabaseConfig" class="mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-white/80 text-sm font-medium mb-2">Supabase URL</label>
+                        <input type="url" id="supabaseUrl" placeholder="https://xyz.supabase.co" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-white/80 text-sm font-medium mb-2">API Key (anon public)</label>
+                        <input type="password" id="supabaseKey" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." class="form-input">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-white/80 text-sm font-medium mb-2">API Key (anon public)</label>
-                    <input type="password" id="supabaseKey" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." 
-                           class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                <button id="connectBtn" class="btn btn-success">🔗 Bağlan</button>
+                <div id="connectionStatus" class="mt-3 text-sm text-white/60">Bağlantı bilgilerini girin</div>
+            </div>
+            
+            <!-- User Setup -->
+            <div id="userConfig" class="hidden">
+                <div class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-white/80 text-sm font-medium mb-2">Kullanıcı Adınız</label>
+                        <input type="text" id="userName" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" class="form-input">
+                    </div>
+                    <button id="saveUserBtn" class="btn btn-primary">💾 Kaydet</button>
+                    <button id="adminBtn" class="btn btn-warning">🔐 Yönetici</button>
                 </div>
-            </div>
-            <button id="connectBtn" class="btn-hover bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                🔗 Bağlan
-            </button>
-            <div id="connectionStatus" class="mt-3 text-sm text-white/60">
-                Bağlantı için yukarıdaki bilgileri girin
+                <div id="currentUser" class="mt-3 text-white/80 text-center">Mevcut kullanıcı: <span class="font-semibold">Belirtilmedi</span></div>
             </div>
         </div>
 
-        <!-- Admin Section -->
-        <div id="adminSection" class="glass rounded-2xl p-6 mb-8 hidden">
-            <h2 class="text-xl font-semibold text-white mb-4">📊 Yönetici Paneli</h2>
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <input type="password" id="adminPassword" placeholder="Yönetici şifresi" 
-                       class="input-focus flex-1 px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 text-gray-800">
-                <button id="loginAdminBtn" class="btn-hover bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    🔐 Giriş Yap
-                </button>
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="glass rounded-2xl p-6 mb-8 hidden">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 Yönetici Paneli</h3>
+            <div class="flex gap-4 items-end mb-4">
+                <div class="flex-1">
+                    <input type="password" id="adminPassword" placeholder="Yönetici şifresi" class="form-input">
+                </div>
+                <button id="loginBtn" class="btn btn-danger">🔓 Giriş</button>
             </div>
-        </div>
-
-        <!-- Reports Section -->
-        <div id="reportsSection" class="glass rounded-2xl p-6 mb-8 hidden">
-            <h2 class="text-xl font-semibold text-white mb-4">📈 Görev Raporları</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <button id="generateReportBtn" class="btn-hover bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    📊 Rapor Oluştur
-                </button>
-                <button id="exportReportBtn" class="btn-hover bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    📑 Excel'e Aktar
-                </button>
+            <div id="reportSection" class="hidden">
+                <div class="flex gap-4 mb-4">
+                    <button id="generateReportBtn" class="btn btn-purple">📊 Rapor Oluştur</button>
+                    <button id="exportBtn" class="btn btn-success">📑 Excel İndir</button>
+                </div>
+                <div id="reportContent"></div>
             </div>
-            <div id="reportContent" class="glass rounded-xl p-4 hidden">
-                <!-- Rapor içeriği buraya gelecek -->
-            </div>
-        </div>
-            <h2 class="text-xl font-semibold text-white mb-4">👤 Kullanıcı Bilgisi</h2>
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <input type="text" id="userNameInput" placeholder="Adınızı girin (örn: Ayşe Öğretmen)" 
-                       class="input-focus flex-1 px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
-                <button id="saveUserBtn" class="btn-hover bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg">
-                    💾 Kaydet
-                </button>
-            </div>
-            <p id="currentUser" class="text-white/80 mt-3 text-center">
-                Mevcut kullanıcı: <span class="font-semibold text-white">Belirtilmedi</span>
-            </p>
         </div>
 
         <!-- Main Content -->
         <div id="mainContent" class="hidden">
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <!-- Calendar Section -->
+            <div class="main-grid">
+                <!-- Calendar -->
                 <div class="glass rounded-2xl p-6">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-white flex items-center">
-                            📅 Takvim
-                        </h2>
-                        <div class="flex items-center gap-2">
-                            <button id="prevMonth" class="btn-hover p-3 bg-white/20 hover:bg-white/30 rounded-xl">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            <span id="currentMonthYear" class="text-xl font-bold text-white min-w-[200px] text-center"></span>
-                            <button id="nextMonth" class="btn-hover p-3 bg-white/20 hover:bg-white/30 rounded-xl">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
+                        <h2 class="text-xl font-semibold text-white">📅 Takvim</h2>
+                        <div class="flex items-center gap-3">
+                            <button id="prevBtn" class="btn btn-primary">‹</button>
+                            <span id="monthYear" class="text-white font-semibold min-w-[150px] text-center"></span>
+                            <button id="nextBtn" class="btn btn-primary">›</button>
                         </div>
                     </div>
                     
                     <!-- Week headers -->
-                    <div class="calendar-grid text-sm font-semibold text-white/80 mb-4">
-                        <div class="text-center py-2">Pzt</div>
-                        <div class="text-center py-2">Sal</div>
-                        <div class="text-center py-2">Çar</div>
-                        <div class="text-center py-2">Per</div>
-                        <div class="text-center py-2">Cum</div>
-                        <div class="text-center py-2">Cmt</div>
-                        <div class="text-center py-2">Paz</div>
+                    <div class="calendar mb-4">
+                        <div class="text-center font-semibold text-white/80 p-2">Pzt</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Sal</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Çar</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Per</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Cum</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Cmt</div>
+                        <div class="text-center font-semibold text-white/80 p-2">Paz</div>
                     </div>
                     
                     <!-- Calendar days -->
-                    <div id="calendarDays" class="calendar-grid">
-                        <!-- Days will be generated here -->
+                    <div id="calendar" class="calendar"></div>
+                    
+                    <!-- Legend -->
+                    <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                        <div class="flex items-center gap-2"><div class="dot rektorluk"></div><span class="text-white/80">🏛️ Rektörlük</span></div>
+                        <div class="flex items-center gap-2"><div class="dot fakulte"></div><span class="text-white/80">🏢 Fakülte</span></div>
+                        <div class="flex items-center gap-2"><div class="dot tatil"></div><span class="text-white/80">🏖️ Tatil</span></div>
+                        <div class="flex items-center gap-2"><div class="dot toplanti"></div><span class="text-white/80">🤝 Toplantı</span></div>
+                        <div class="flex items-center gap-2"><div class="dot etkinlik"></div><span class="text-white/80">🎉 Etkinlik</span></div>
+                        <div class="flex items-center gap-2"><div class="dot gorev"></div><span class="text-white/80">📋 Görev</span></div>
                     </div>
                 </div>
 
@@ -344,35 +331,33 @@
                 <div class="space-y-6">
                     <!-- Add Event Form -->
                     <div class="glass rounded-2xl p-6">
-                        <h2 class="text-2xl font-semibold text-white mb-6 flex items-center">
-                            ➕ Yeni Etkinlik/Görev
-                        </h2>
+                        <h3 class="text-xl font-semibold text-white mb-4">➕ Yeni Etkinlik</h3>
                         
                         <div class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-white/80 text-sm font-medium mb-2">Başlangıç</label>
-                                    <input type="date" id="startDate" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                                    <input type="date" id="startDate" class="form-input">
                                 </div>
                                 <div>
                                     <label class="block text-white/80 text-sm font-medium mb-2">Bitiş</label>
-                                    <input type="date" id="endDate" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                                    <input type="date" id="endDate" class="form-input">
                                 </div>
                             </div>
                             
                             <div>
                                 <label class="block text-white/80 text-sm font-medium mb-2">Başlık</label>
-                                <input type="text" id="eventTitle" placeholder="Etkinlik/görev başlığı" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                                <input type="text" id="title" placeholder="Etkinlik başlığı" class="form-input">
                             </div>
                             
                             <div>
                                 <label class="block text-white/80 text-sm font-medium mb-2">Açıklama</label>
-                                <textarea id="eventDescription" rows="3" placeholder="Detaylı açıklama (isteğe bağlı)" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 resize-none"></textarea>
+                                <textarea id="description" rows="3" placeholder="Detaylı açıklama (isteğe bağlı)" class="form-input resize-none"></textarea>
                             </div>
                             
                             <div>
                                 <label class="block text-white/80 text-sm font-medium mb-2">Kategori</label>
-                                <select id="eventCategory" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                                <select id="category" class="form-input">
                                     <option value="gorev">📋 Genel Görev</option>
                                     <option value="fakulte">🏢 Fakülte Görevi</option>
                                     <option value="rektorluk">🏛️ Rektörlük Görevi</option>
@@ -382,52 +367,15 @@
                                 </select>
                             </div>
                             
-                            <button id="addEventBtn" class="btn-hover w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg">
-                                ✨ Ekle
-                            </button>
+                            <button id="addBtn" class="btn btn-success w-full">✨ Ekle</button>
                         </div>
                     </div>
 
-                    <!-- Color Legend -->
+                    <!-- Events List -->
                     <div class="glass rounded-2xl p-6">
-                        <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
-                            🎨 Renk Açıklaması
-                        </h2>
-                        <div class="grid grid-cols-2 gap-2 text-sm">
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mr-2"></div>
-                                <span class="text-white/80">📋 Genel Görev</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 mr-2"></div>
-                                <span class="text-white/80">🏢 Fakülte</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-red-600 mr-2"></div>
-                                <span class="text-white/80">🏛️ Rektörlük</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 mr-2"></div>
-                                <span class="text-white/80">🏖️ Tatil</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 mr-2"></div>
-                                <span class="text-white/80">🤝 Toplantı</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-pink-500 to-pink-600 mr-2"></div>
-                                <span class="text-white/80">🎉 Etkinlik</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass rounded-2xl p-6">
-                        <h2 class="text-2xl font-semibold text-white mb-6 flex items-center">
-                            📋 Etkinlikler
-                        </h2>
-                        <div id="eventsList" class="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                            <div id="noEvents" class="text-white/60 text-center py-8">
-                                Henüz etkinlik yok
-                            </div>
+                        <h3 class="text-xl font-semibold text-white mb-4">📋 Etkinlikler</h3>
+                        <div id="eventsList" class="scrollable space-y-3">
+                            <div class="text-white/60 text-center py-8">Henüz etkinlik yok</div>
                         </div>
                     </div>
                 </div>
@@ -435,230 +383,140 @@
         </div>
     </div>
 
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
     <script>
-        // Global variables
-        let supabase = null;
-        let currentUser = localStorage.getItem('teacherName') || '';
-        let currentMonth = new Date().getMonth();
-        let currentYear = new Date().getFullYear();
-        let selectedDate = null;
-        let events = [];
-        let isConnected = false;
-        let isAdmin = localStorage.getItem('isAdmin') === 'true';
-        const ADMIN_PASSWORD = 'admin123'; // Değiştir!
+        // Global State
+        const state = {
+            supabase: null,
+            currentUser: localStorage.getItem('teacherName') || '',
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear(),
+            selectedDate: null,
+            events: [],
+            isAdmin: localStorage.getItem('isAdmin') === 'true'
+        };
 
-        // DOM elements
-        const configSection = document.getElementById('configSection');
-        const userSection = document.getElementById('userSection');
-        const adminSection = document.getElementById('adminSection');
-        const reportsSection = document.getElementById('reportsSection');
-        const mainContent = document.getElementById('mainContent');
-        const connectBtn = document.getElementById('connectBtn');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const userNameInput = document.getElementById('userNameInput');
-        const saveUserBtn = document.getElementById('saveUserBtn');
-        const showAdminBtn = document.getElementById('showAdminBtn');
-        const adminPassword = document.getElementById('adminPassword');
-        const loginAdminBtn = document.getElementById('loginAdminBtn');
-        const generateReportBtn = document.getElementById('generateReportBtn');
-        const exportReportBtn = document.getElementById('exportReportBtn');
-        const reportContent = document.getElementById('reportContent');
-        const currentUserSpan = document.querySelector('#currentUser span');
-        const calendarDays = document.getElementById('calendarDays');
-        const currentMonthYear = document.getElementById('currentMonthYear');
-        const prevMonth = document.getElementById('prevMonth');
-        const nextMonth = document.getElementById('nextMonth');
-        const startDate = document.getElementById('startDate');
-        const endDate = document.getElementById('endDate');
-        const eventTitle = document.getElementById('eventTitle');
-        const eventDescription = document.getElementById('eventDescription');
-        const eventCategory = document.getElementById('eventCategory');
-        const isHoliday = document.getElementById('isHoliday');
-        const addEventBtn = document.getElementById('addEventBtn');
-        const eventsList = document.getElementById('eventsList');
-        const noEvents = document.getElementById('noEvents');
+        const ADMIN_PASSWORD = 'admin123'; // Değiştirilebilir
+        const CATEGORY_PRIORITY = ['rektorluk', 'fakulte', 'tatil', 'toplanti', 'etkinlik', 'gorev'];
+        const CATEGORY_INFO = {
+            rektorluk: { icon: '🏛️', name: 'Rektörlük', color: '#dc2626' },
+            fakulte: { icon: '🏢', name: 'Fakülte', color: '#16a34a' },
+            tatil: { icon: '🏖️', name: 'Tatil', color: '#ea580c' },
+            toplanti: { icon: '🤝', name: 'Toplantı', color: '#9333ea' },
+            etkinlik: { icon: '🎉', name: 'Etkinlik', color: '#db2777' },
+            gorev: { icon: '📋', name: 'Görev', color: '#2563eb' }
+        };
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set today's date as default
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            startDate.value = todayStr;
-            endDate.value = todayStr;
+        // DOM Elements
+        const els = {
+            setupSection: document.getElementById('setupSection'),
+            userConfig: document.getElementById('userConfig'),
+            adminPanel: document.getElementById('adminPanel'),
+            mainContent: document.getElementById('mainContent'),
+            supabaseUrl: document.getElementById('supabaseUrl'),
+            supabaseKey: document.getElementById('supabaseKey'),
+            connectBtn: document.getElementById('connectBtn'),
+            connectionStatus: document.getElementById('connectionStatus'),
+            userName: document.getElementById('userName'),
+            saveUserBtn: document.getElementById('saveUserBtn'),
+            adminBtn: document.getElementById('adminBtn'),
+            currentUser: document.querySelector('#currentUser span'),
+            adminPassword: document.getElementById('adminPassword'),
+            loginBtn: document.getElementById('loginBtn'),
+            reportSection: document.getElementById('reportSection'),
+            generateReportBtn: document.getElementById('generateReportBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            reportContent: document.getElementById('reportContent'),
+            monthYear: document.getElementById('monthYear'),
+            prevBtn: document.getElementById('prevBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            calendar: document.getElementById('calendar'),
+            startDate: document.getElementById('startDate'),
+            endDate: document.getElementById('endDate'),
+            title: document.getElementById('title'),
+            description: document.getElementById('description'),
+            category: document.getElementById('category'),
+            addBtn: document.getElementById('addBtn'),
+            eventsList: document.getElementById('eventsList'),
+            notification: document.getElementById('notification')
+        };
 
-            // Load saved user
-            if (currentUser) {
-                userNameInput.value = currentUser;
-                currentUserSpan.textContent = currentUser;
-            }
-
-            // Check admin status
-            if (isAdmin) {
-                reportsSection.classList.remove('hidden');
-            }
-
-            // Check for saved Supabase config
-            const savedUrl = localStorage.getItem('supabaseUrl');
-            const savedKey = localStorage.getItem('supabaseKey');
-            if (savedUrl && savedKey) {
-                document.getElementById('supabaseUrl').value = savedUrl;
-                document.getElementById('supabaseKey').value = savedKey;
-                connectToSupabase(savedUrl, savedKey);
-            }
-
-            renderCalendar();
-        });
-
-        // Notification system
+        // Utility Functions
         function showNotification(message, type = 'info') {
-            const notification = document.getElementById('notification');
-            const notificationText = document.getElementById('notificationText');
-            
-            notificationText.textContent = message;
-            notification.className = `fixed top-4 right-4 z-50 glass text-white px-6 py-3 rounded-lg shadow-lg ${
-                type === 'error' ? 'bg-red-500/20 border-red-500/30' : 
-                type === 'success' ? 'bg-green-500/20 border-green-500/30' : 
-                'bg-blue-500/20 border-blue-500/30'
-            }`;
-            notification.classList.remove('hidden');
-            
+            els.notification.textContent = message;
+            els.notification.className = `notification ${type} show`;
             setTimeout(() => {
-                notification.classList.add('hidden');
+                els.notification.classList.remove('show');
             }, 3000);
         }
 
-        // Connect to Supabase
-        async function connectToSupabase(url, key) {
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function isToday(year, month, day) {
+            const today = new Date();
+            return year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+        }
+
+        function isSameDay(date1, date2) {
+            return formatDate(date1) === formatDate(date2);
+        }
+
+        // Supabase Functions
+        async function connectToSupabase() {
+            const url = els.supabaseUrl.value.trim();
+            const key = els.supabaseKey.value.trim();
+            
+            if (!url || !key) {
+                showNotification('Lütfen URL ve API key girin', 'error');
+                return;
+            }
+
             try {
-                connectionStatus.innerHTML = '<div class="loading"></div> Bağlanıyor...';
+                els.connectionStatus.innerHTML = '<div class="spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div> Bağlanıyor...';
                 
-                // Create Supabase client
-                supabase = window.supabase.createClient(url, key);
+                state.supabase = window.supabase.createClient(url, key);
                 
                 // Test connection
-                const { data, error } = await supabase.from('events').select('count').limit(1);
-                
+                const { data, error } = await state.supabase.from('events').select('count').limit(1);
                 if (error) throw error;
                 
                 // Save config
                 localStorage.setItem('supabaseUrl', url);
                 localStorage.setItem('supabaseKey', key);
                 
-                // Update UI
-                connectionStatus.innerHTML = '✅ Bağlantı başarılı!';
-                connectionStatus.className = 'mt-3 text-sm text-green-400';
+                els.connectionStatus.innerHTML = '✅ Bağlantı başarılı!';
+                els.connectionStatus.className = 'mt-3 text-sm text-green-400';
+                els.userConfig.classList.remove('hidden');
                 
-                configSection.classList.add('hidden');
-                userSection.classList.remove('hidden');
-                
-                isConnected = true;
-                
-                // Load events
                 await loadEvents();
-                
-                // Subscribe to real-time updates
-                supabase
-                    .channel('events')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, 
-                        (payload) => {
-                            console.log('Real-time update:', payload);
-                            loadEvents();
-                        })
-                    .subscribe();
+                setupRealtime();
                 
                 showNotification('Supabase bağlantısı başarılı!', 'success');
                 
             } catch (error) {
                 console.error('Connection error:', error);
-                connectionStatus.innerHTML = '❌ Bağlantı hatası: ' + error.message;
-                connectionStatus.className = 'mt-3 text-sm text-red-400';
-                showNotification('Bağlantı hatası: ' + error.message, 'error');
+                els.connectionStatus.innerHTML = `❌ Hata: ${error.message}`;
+                els.connectionStatus.className = 'mt-3 text-sm text-red-400';
+                showNotification(`Bağlantı hatası: ${error.message}`, 'error');
             }
         }
 
-        // Event listeners
-        connectBtn.addEventListener('click', () => {
-            const url = document.getElementById('supabaseUrl').value.trim();
-            const key = document.getElementById('supabaseKey').value.trim();
-            
-            if (!url || !key) {
-                showNotification('Lütfen URL ve API key girin', 'error');
-                return;
-            }
-            
-            connectToSupabase(url, key);
-        });
-
-        saveUserBtn.addEventListener('click', () => {
-            const name = userNameInput.value.trim();
-            if (name) {
-                currentUser = name;
-                localStorage.setItem('teacherName', name);
-                currentUserSpan.textContent = name;
-                
-                mainContent.classList.remove('hidden');
-                showNotification('Kullanıcı adı kaydedildi!', 'success');
-            } else {
-                showNotification('Lütfen bir isim girin', 'error');
-            }
-        });
-
-        showAdminBtn.addEventListener('click', () => {
-            adminSection.classList.remove('hidden');
-        });
-
-        loginAdminBtn.addEventListener('click', () => {
-            const password = adminPassword.value.trim();
-            if (password === ADMIN_PASSWORD) {
-                isAdmin = true;
-                localStorage.setItem('isAdmin', 'true');
-                adminSection.classList.add('hidden');
-                reportsSection.classList.remove('hidden');
-                showNotification('Yönetici girişi başarılı!', 'success');
-                adminPassword.value = '';
-            } else {
-                showNotification('Hatalı şifre!', 'error');
-            }
-        });
-
-        generateReportBtn.addEventListener('click', generateReport);
-        exportReportBtn.addEventListener('click', exportToExcel);
-
-        prevMonth.addEventListener('click', () => {
-            currentMonth--;
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            selectedDate = null;
-            renderCalendar();
-        });
-
-        nextMonth.addEventListener('click', () => {
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            }
-            selectedDate = null;
-            renderCalendar();
-        });
-
-        addEventBtn.addEventListener('click', addEvent);
-
-        // Load events from Supabase
         async function loadEvents() {
-            if (!supabase) return;
+            if (!state.supabase) return;
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await state.supabase
                     .from('events')
                     .select('*')
                     .order('start_date', { ascending: true });
                 
                 if (error) throw error;
                 
-                events = data || [];
+                state.events = data || [];
                 renderCalendar();
                 renderEvents();
                 
@@ -668,51 +526,51 @@
             }
         }
 
-        // Add new event
+        function setupRealtime() {
+            if (!state.supabase) return;
+            
+            state.supabase
+                .channel('events')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+                    loadEvents();
+                })
+                .subscribe();
+        }
+
         async function addEvent() {
-            if (!supabase || !currentUser) {
-                showNotification('Lütfen önce bağlantı kurun ve kullanıcı adı girin', 'error');
+            if (!state.supabase || !state.currentUser) {
+                showNotification('Lütfen önce kurulumu tamamlayın', 'error');
                 return;
             }
             
-            const title = eventTitle.value.trim();
-            const start = startDate.value;
-            const end = endDate.value;
-            const description = eventDescription.value.trim();
-            const category = eventCategory.value;
+            const eventData = {
+                title: els.title.value.trim(),
+                start_date: els.startDate.value,
+                end_date: els.endDate.value,
+                description: els.description.value.trim() || null,
+                category: els.category.value,
+                is_holiday: els.category.value === 'tatil',
+                creator_name: state.currentUser
+            };
             
-            if (!title || !start || !end) {
-                showNotification('Lütfen başlık ve tarih alanlarını doldurun', 'error');
+            if (!eventData.title || !eventData.start_date || !eventData.end_date) {
+                showNotification('Lütfen gerekli alanları doldurun', 'error');
                 return;
             }
             
-            if (new Date(start) > new Date(end)) {
+            if (new Date(eventData.start_date) > new Date(eventData.end_date)) {
                 showNotification('Bitiş tarihi başlangıçtan önce olamaz', 'error');
                 return;
             }
             
             try {
-                const { data, error } = await supabase
-                    .from('events')
-                    .insert([{
-                        title,
-                        start_date: start,
-                        end_date: end,
-                        description: description || null,
-                        category: category,
-                        is_holiday: category === 'tatil',
-                        creator_name: currentUser
-                    }]);
-                
+                const { error } = await state.supabase.from('events').insert([eventData]);
                 if (error) throw error;
                 
-                // Optimistic update - hemen UI'ı güncelle
-                await loadEvents();
-                
                 // Clear form
-                eventTitle.value = '';
-                eventDescription.value = '';
-                eventCategory.value = 'gorev';
+                els.title.value = '';
+                els.description.value = '';
+                els.category.value = 'gorev';
                 
                 showNotification('Etkinlik eklendi!', 'success');
                 
@@ -722,20 +580,12 @@
             }
         }
 
-        // Delete event
         async function deleteEvent(eventId) {
-            if (!supabase) return;
+            if (!state.supabase) return;
             
             try {
-                const { error } = await supabase
-                    .from('events')
-                    .delete()
-                    .eq('id', eventId);
-                
+                const { error } = await state.supabase.from('events').delete().eq('id', eventId);
                 if (error) throw error;
-                
-                // Optimistic update - hemen UI'ı güncelle  
-                await loadEvents();
                 
                 showNotification('Etkinlik silindi!', 'success');
                 
@@ -745,73 +595,70 @@
             }
         }
 
-        // Render calendar
+        // Calendar Functions
         function renderCalendar() {
-            calendarDays.innerHTML = '';
-            
-            // Update month/year display
-            const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+            const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
                                'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-            currentMonthYear.textContent = `${monthNames[currentMonth]} ${currentYear}`;
             
-            // Get first day and days in month
-            const firstDay = new Date(currentYear, currentMonth, 1);
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            els.monthYear.textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
+            
+            const firstDay = new Date(state.currentYear, state.currentMonth, 1);
+            const lastDay = new Date(state.currentYear, state.currentMonth + 1, 0);
             const daysInMonth = lastDay.getDate();
-            const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Make Monday = 0
+            const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
             
-            // Add previous month days
-            const prevMonth = new Date(currentYear, currentMonth, 0);
-            const daysInPrevMonth = prevMonth.getDate();
+            els.calendar.innerHTML = '';
             
+            // Previous month days
+            const prevMonth = new Date(state.currentYear, state.currentMonth, 0);
             for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-                const dayDiv = createDayElement(daysInPrevMonth - i, false, false);
-                calendarDays.appendChild(dayDiv);
+                const dayEl = createDayElement(prevMonth.getDate() - i, false);
+                els.calendar.appendChild(dayEl);
             }
             
-            // Add current month days
+            // Current month days
             for (let day = 1; day <= daysInMonth; day++) {
-                const isToday = isDateToday(currentYear, currentMonth, day);
-                const dayDiv = createDayElement(day, true, isToday);
-                calendarDays.appendChild(dayDiv);
+                const dayEl = createDayElement(day, true);
+                els.calendar.appendChild(dayEl);
             }
             
-            // Add next month days to fill grid
-            const totalCells = calendarDays.children.length;
-            const remainingCells = 42 - totalCells; // 6 weeks * 7 days
-            
+            // Next month days
+            const totalCells = els.calendar.children.length;
+            const remainingCells = 42 - totalCells;
             for (let day = 1; day <= remainingCells; day++) {
-                const dayDiv = createDayElement(day, false, false);
-                calendarDays.appendChild(dayDiv);
+                const dayEl = createDayElement(day, false);
+                els.calendar.appendChild(dayEl);
             }
         }
 
-        // Create day element
-        function createDayElement(day, isCurrentMonth, isToday) {
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'calendar-day';
+        function createDayElement(day, isCurrentMonth) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'day';
             
-            if (isCurrentMonth) {
-                dayDiv.classList.add('current-month');
-            } else {
-                dayDiv.classList.add('other-month');
+            if (!isCurrentMonth) {
+                dayEl.classList.add('other-month');
             }
             
-            if (isToday) {
-                dayDiv.classList.add('today');
-            }
-            
-            // Create day number
-            const dayNumber = document.createElement('span');
+            const dayNumber = document.createElement('div');
             dayNumber.className = 'day-number';
             dayNumber.textContent = day;
-            dayDiv.appendChild(dayNumber);
+            dayEl.appendChild(dayNumber);
             
             if (isCurrentMonth) {
-                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateStr = `${state.currentYear}-${String(state.currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
-                // Check for events on this day
-                const dayEvents = events.filter(event => {
+                // Check if today
+                if (isToday(state.currentYear, state.currentMonth, day)) {
+                    dayEl.classList.add('today');
+                }
+                
+                // Check if selected
+                if (state.selectedDate === dateStr) {
+                    dayEl.classList.add('selected');
+                }
+                
+                // Check for events
+                const dayEvents = state.events.filter(event => {
                     const startDate = new Date(event.start_date);
                     const endDate = new Date(event.end_date);
                     const currentDate = new Date(dateStr);
@@ -819,237 +666,288 @@
                 });
                 
                 if (dayEvents.length > 0) {
-                    // Group events by category and find the most important one for background color
-                    const categoryPriority = ['rektorluk', 'fakulte', 'tatil', 'toplanti', 'etkinlik', 'gorev'];
+                    // Find highest priority category
                     let primaryCategory = 'gorev';
-                    
-                    for (const priority of categoryPriority) {
+                    for (const priority of CATEGORY_PRIORITY) {
                         if (dayEvents.some(event => event.category === priority)) {
                             primaryCategory = priority;
                             break;
                         }
                     }
+                    dayEl.classList.add(`has-${primaryCategory}`);
                     
-                    dayDiv.classList.add(`has-${primaryCategory}`);
+                    // Add dots
+                    const dotsEl = document.createElement('div');
+                    dotsEl.className = 'event-dots';
                     
-                    // Add dots for all categories present
-                    const categoriesPresent = [...new Set(dayEvents.map(event => event.category))];
-                    categoriesPresent.slice(0, 3).forEach(category => {
+                    const categories = [...new Set(dayEvents.map(event => event.category))];
+                    categories.slice(0, 4).forEach(cat => {
                         const dot = document.createElement('div');
-                        dot.className = `event-dot ${category}`;
-                        dayDiv.appendChild(dot);
+                        dot.className = `dot ${cat}`;
+                        dotsEl.appendChild(dot);
                     });
-                }
-                
-                // Selected date
-                if (selectedDate === dateStr) {
-                    dayDiv.classList.add('selected-date');
+                    
+                    dayEl.appendChild(dotsEl);
                 }
                 
                 // Click handler
-                dayDiv.addEventListener('click', () => {
-                    selectedDate = dateStr;
-                    startDate.value = dateStr;
-                    endDate.value = dateStr;
+                dayEl.addEventListener('click', () => {
+                    state.selectedDate = dateStr;
+                    els.startDate.value = dateStr;
+                    els.endDate.value = dateStr;
                     renderCalendar();
-                    renderEvents(dateStr);
+                    renderEvents();
                 });
             }
             
-            return dayDiv;
+            return dayEl;
         }
 
-        // Check if date is today
-        function isDateToday(year, month, day) {
-            const today = new Date();
-            return year === today.getFullYear() && 
-                   month === today.getMonth() && 
-                   day === today.getDate();
+        function changeMonth(direction) {
+            state.currentMonth += direction;
+            if (state.currentMonth < 0) {
+                state.currentMonth = 11;
+                state.currentYear--;
+            } else if (state.currentMonth > 11) {
+                state.currentMonth = 0;
+                state.currentYear++;
+            }
+            state.selectedDate = null;
+            renderCalendar();
+            renderEvents();
         }
 
-        // Render events list
-        function renderEvents(filterDate = null) {
-            let filteredEvents = events;
+        // Events List
+        function renderEvents() {
+            let filteredEvents = state.events;
             
-            if (filterDate) {
-                filteredEvents = events.filter(event => {
+            if (state.selectedDate) {
+                filteredEvents = state.events.filter(event => {
                     const startDate = new Date(event.start_date);
                     const endDate = new Date(event.end_date);
-                    const currentDate = new Date(filterDate);
-                    return currentDate >= startDate && currentDate <= endDate;
+                    const selectedDateObj = new Date(state.selectedDate);
+                    return selectedDateObj >= startDate && selectedDateObj <= endDate;
                 });
             }
             
             if (filteredEvents.length === 0) {
-                eventsList.innerHTML = '<div id="noEvents" class="text-white/60 text-center py-8">Henüz etkinlik yok</div>';
+                els.eventsList.innerHTML = '<div class="text-white/60 text-center py-8">Henüz etkinlik yok</div>';
                 return;
             }
             
-            // Sort events by start date
             filteredEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
             
-            eventsList.innerHTML = '';
+            els.eventsList.innerHTML = '';
             
             filteredEvents.forEach(event => {
-                const eventDiv = document.createElement('div');
-                eventDiv.className = 'event-card rounded-xl p-4 border border-white/20 flex justify-between items-start';
+                const eventEl = document.createElement('div');
+                eventEl.className = 'event-card fade-in';
                 
-                const startDateObj = new Date(event.start_date);
-                const endDateObj = new Date(event.end_date);
+                const categoryInfo = CATEGORY_INFO[event.category] || CATEGORY_INFO.gorev;
+                const startDate = new Date(event.start_date);
+                const endDate = new Date(event.end_date);
                 const isSameDay = event.start_date === event.end_date;
                 
-                const dateText = isSameDay ? 
-                    startDateObj.toLocaleDateString('tr-TR') :
-                    `${startDateObj.toLocaleDateString('tr-TR')} - ${endDateObj.toLocaleDateString('tr-TR')}`;
+                const dateText = isSameDay 
+                    ? startDate.toLocaleDateString('tr-TR')
+                    : `${startDate.toLocaleDateString('tr-TR')} - ${endDate.toLocaleDateString('tr-TR')}`;
                 
-                // Category info with colors
-                const categoryInfo = {
-                    'gorev': { icon: '📋', name: 'Genel Görev', color: 'bg-blue-500' },
-                    'fakulte': { icon: '🏢', name: 'Fakülte', color: 'bg-green-500' },
-                    'rektorluk': { icon: '🏛️', name: 'Rektörlük', color: 'bg-red-500' },
-                    'tatil': { icon: '🏖️', name: 'Tatil', color: 'bg-orange-500' },
-                    'toplanti': { icon: '🤝', name: 'Toplantı', color: 'bg-purple-500' },
-                    'etkinlik': { icon: '🎉', name: 'Etkinlik', color: 'bg-pink-500' }
-                };
-                
-                const category = categoryInfo[event.category] || categoryInfo['gorev'];
-                
-                const categoryBadge = `<span class="ml-2 px-2 py-1 ${category.color} text-white text-xs font-semibold rounded-full">${category.icon} ${category.name.toUpperCase()}</span>`;
-                
-                eventDiv.innerHTML = `
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-1">
-                            ${event.title} ${categoryBadge}
-                        </h3>
-                        <p class="text-sm text-gray-600 mb-1">📅 ${dateText}</p>
-                        ${event.description ? `<p class="text-sm text-gray-700 mb-2">${event.description}</p>` : ''}
-                        <p class="text-xs text-gray-500">👤 ${event.creator_name}</p>
+                eventEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="font-semibold text-gray-800">${event.title}</h4>
+                                <span class="category-badge badge-${event.category}">
+                                    ${categoryInfo.icon} ${categoryInfo.name}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">📅 ${dateText}</p>
+                            ${event.description ? `<p class="text-sm text-gray-700 mb-2">${event.description}</p>` : ''}
+                            <p class="text-xs text-gray-500">👤 ${event.creator_name}</p>
+                        </div>
+                        <button onclick="deleteEvent('${event.id}')" class="btn btn-danger p-2 ml-3">
+                            🗑️
+                        </button>
                     </div>
-                    <button onclick="deleteEvent('${event.id}')" 
-                            class="btn-hover ml-4 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
                 `;
                 
-                eventsList.appendChild(eventDiv);
+                els.eventsList.appendChild(eventEl);
             });
         }
 
-        // Generate report function
+        // Admin Functions
         function generateReport() {
-            if (!events.length) {
+            if (!state.events.length) {
                 showNotification('Henüz etkinlik yok', 'error');
                 return;
             }
-
-            // Kullanıcıya göre grupla
+            
             const userStats = {};
-            events.forEach(event => {
+            state.events.forEach(event => {
                 const creator = event.creator_name || 'Bilinmiyor';
                 if (!userStats[creator]) {
-                    userStats[creator] = {
-                        total: 0,
-                        gorev: 0,
-                        fakulte: 0,
-                        rektorluk: 0,
-                        tatil: 0,
-                        toplanti: 0,
-                        etkinlik: 0
-                    };
+                    userStats[creator] = { total: 0, ...Object.fromEntries(Object.keys(CATEGORY_INFO).map(k => [k, 0])) };
                 }
                 userStats[creator].total++;
                 userStats[creator][event.category || 'gorev']++;
             });
-
-            // Rapor HTML'i oluştur
-            let reportHTML = `
-                <h3 class="text-lg font-semibold text-white mb-4">📊 Kullanıcı Görev İstatistikleri</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-white">
-                        <thead>
-                            <tr class="border-b border-white/20">
-                                <th class="text-left py-2">Kullanıcı</th>
-                                <th class="text-center py-2">Toplam</th>
-                                <th class="text-center py-2">📋 Görev</th>
-                                <th class="text-center py-2">🏢 Fakülte</th>
-                                <th class="text-center py-2">🏛️ Rektörlük</th>
-                                <th class="text-center py-2">🏖️ Tatil</th>
-                                <th class="text-center py-2">🤝 Toplantı</th>
-                                <th class="text-center py-2">🎉 Etkinlik</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            // Toplam görev sayısına göre sırala
+            
             const sortedUsers = Object.entries(userStats).sort((a, b) => b[1].total - a[1].total);
-
+            
+            let reportHTML = `
+                <div class="glass rounded-xl p-4">
+                    <h4 class="text-lg font-semibold text-white mb-4">📊 Kullanıcı Görev İstatistikleri</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-white">
+                            <thead>
+                                <tr class="border-b border-white/20">
+                                    <th class="text-left py-2">Kullanıcı</th>
+                                    <th class="text-center py-2">Toplam</th>
+                                    <th class="text-center py-2">🏛️</th>
+                                    <th class="text-center py-2">🏢</th>
+                                    <th class="text-center py-2">🏖️</th>
+                                    <th class="text-center py-2">🤝</th>
+                                    <th class="text-center py-2">🎉</th>
+                                    <th class="text-center py-2">📋</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
             sortedUsers.forEach(([user, stats]) => {
                 reportHTML += `
                     <tr class="border-b border-white/10">
                         <td class="py-2 font-medium">${user}</td>
                         <td class="text-center py-2 font-bold">${stats.total}</td>
-                        <td class="text-center py-2">${stats.gorev}</td>
-                        <td class="text-center py-2">${stats.fakulte}</td>
                         <td class="text-center py-2">${stats.rektorluk}</td>
+                        <td class="text-center py-2">${stats.fakulte}</td>
                         <td class="text-center py-2">${stats.tatil}</td>
                         <td class="text-center py-2">${stats.toplanti}</td>
                         <td class="text-center py-2">${stats.etkinlik}</td>
+                        <td class="text-center py-2">${stats.gorev}</td>
                     </tr>
                 `;
             });
-
+            
             reportHTML += `
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 text-xs text-white/60">
-                    Rapor oluşturulma tarihi: ${new Date().toLocaleString('tr-TR')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 text-xs text-white/60 text-center">
+                        Rapor tarihi: ${new Date().toLocaleString('tr-TR')}
+                    </div>
                 </div>
             `;
-
-            reportContent.innerHTML = reportHTML;
-            reportContent.classList.remove('hidden');
+            
+            els.reportContent.innerHTML = reportHTML;
         }
 
-        // Export to Excel function
         function exportToExcel() {
-            if (!events.length) {
+            if (!state.events.length) {
                 showNotification('Henüz etkinlik yok', 'error');
                 return;
             }
-
-            // CSV formatında veri hazırla
+            
             let csvContent = "Kullanıcı,Başlık,Kategori,Başlangıç,Bitiş,Açıklama\n";
             
-            events.forEach(event => {
+            state.events.forEach(event => {
                 const row = [
                     event.creator_name || 'Bilinmiyor',
                     event.title,
-                    event.category || 'gorev',
+                    CATEGORY_INFO[event.category]?.name || 'Bilinmiyor',
                     event.start_date,
                     event.end_date,
                     (event.description || '').replace(/,/g, ';')
                 ];
                 csvContent += row.join(',') + '\n';
             });
-
-            // Dosya indir
+            
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', `ogretmen_takvimi_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `ogretmen_takvimi_${formatDate(new Date())}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
-            showNotification('Rapor Excel dosyası olarak indirildi!', 'success');
+            
+            showNotification('Excel dosyası indirildi!', 'success');
         }
+
+        // Event Listeners
+        els.connectBtn.addEventListener('click', connectToSupabase);
+        
+        els.saveUserBtn.addEventListener('click', () => {
+            const name = els.userName.value.trim();
+            if (name) {
+                state.currentUser = name;
+                localStorage.setItem('teacherName', name);
+                els.currentUser.textContent = name;
+                els.mainContent.classList.remove('hidden');
+                showNotification('Kullanıcı adı kaydedildi!', 'success');
+            } else {
+                showNotification('Lütfen bir isim girin', 'error');
+            }
+        });
+        
+        els.adminBtn.addEventListener('click', () => {
+            els.adminPanel.classList.remove('hidden');
+        });
+        
+        els.loginBtn.addEventListener('click', () => {
+            const password = els.adminPassword.value.trim();
+            if (password === ADMIN_PASSWORD) {
+                state.isAdmin = true;
+                localStorage.setItem('isAdmin', 'true');
+                els.reportSection.classList.remove('hidden');
+                els.adminPassword.value = '';
+                showNotification('Yönetici girişi başarılı!', 'success');
+            } else {
+                showNotification('Hatalı şifre!', 'error');
+            }
+        });
+        
+        els.generateReportBtn.addEventListener('click', generateReport);
+        els.exportBtn.addEventListener('click', exportToExcel);
+        
+        els.prevBtn.addEventListener('click', () => changeMonth(-1));
+        els.nextBtn.addEventListener('click', () => changeMonth(1));
+        
+        els.addBtn.addEventListener('click', addEvent);
+        
+        // Make deleteEvent global
+        window.deleteEvent = deleteEvent;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set today's date
+            const today = formatDate(new Date());
+            els.startDate.value = today;
+            els.endDate.value = today;
+            
+            // Load saved config
+            const savedUrl = localStorage.getItem('supabaseUrl');
+            const savedKey = localStorage.getItem('supabaseKey');
+            if (savedUrl && savedKey) {
+                els.supabaseUrl.value = savedUrl;
+                els.supabaseKey.value = savedKey;
+                connectToSupabase();
+            }
+            
+            // Load saved user
+            if (state.currentUser) {
+                els.userName.value = state.currentUser;
+                els.currentUser.textContent = state.currentUser;
+            }
+            
+            // Show admin panel if already admin
+            if (state.isAdmin) {
+                els.reportSection.classList.remove('hidden');
+            }
+            
+            renderCalendar();
+        });
     </script>
 </body>
 </html>
