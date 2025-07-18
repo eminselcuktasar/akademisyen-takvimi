@@ -59,16 +59,40 @@
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
         }
         
-        .calendar-day.has-event {
+        .calendar-day.has-gorev {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .calendar-day.has-fakulte {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
         
-        .calendar-day.has-holiday {
+        .calendar-day.has-rektorluk {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+        
+        .calendar-day.has-tatil {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
             box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        
+        .calendar-day.has-toplanti {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+        
+        .calendar-day.has-etkinlik {
+            background: linear-gradient(135deg, #ec4899, #db2777);
+            color: white;
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
         }
         
         .calendar-day.selected-date {
@@ -90,16 +114,28 @@
             margin-bottom: 4px;
         }
         
-        .event-dot {
-            width: 6px;
-            height: 6px;
-            background: #ef4444;
-            border-radius: 50%;
-            margin-top: 1px;
+        .event-dot.gorev {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         }
         
-        .holiday-dot {
-            background: #f59e0b;
+        .event-dot.fakulte {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .event-dot.rektorluk {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+        
+        .event-dot.tatil {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .event-dot.toplanti {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        
+        .event-dot.etkinlik {
+            background: linear-gradient(135deg, #ec4899, #db2777);
         }
         
         .btn-hover {
@@ -292,9 +328,16 @@
                                 <textarea id="eventDescription" rows="3" placeholder="Detaylı açıklama (isteğe bağlı)" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 resize-none"></textarea>
                             </div>
                             
-                            <div class="flex items-center">
-                                <input type="checkbox" id="isHoliday" class="w-5 h-5 text-orange-500 bg-white/90 border-0 rounded focus:ring-orange-400 focus:ring-2">
-                                <label for="isHoliday" class="ml-3 text-white font-medium">🏖️ Tatil mi?</label>
+                            <div>
+                                <label class="block text-white/80 text-sm font-medium mb-2">Kategori</label>
+                                <select id="eventCategory" class="input-focus w-full px-4 py-3 bg-white/90 rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800">
+                                    <option value="gorev">📋 Genel Görev</option>
+                                    <option value="fakulte">🏢 Fakülte Görevi</option>
+                                    <option value="rektorluk">🏛️ Rektörlük Görevi</option>
+                                    <option value="tatil">🏖️ Tatil</option>
+                                    <option value="toplanti">🤝 Toplantı</option>
+                                    <option value="etkinlik">🎉 Etkinlik</option>
+                                </select>
                             </div>
                             
                             <button id="addEventBtn" class="btn-hover w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg">
@@ -303,7 +346,38 @@
                         </div>
                     </div>
 
-                    <!-- Events List -->
+                    <!-- Color Legend -->
+                    <div class="glass rounded-2xl p-6">
+                        <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+                            🎨 Renk Açıklaması
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mr-2"></div>
+                                <span class="text-white/80">📋 Genel Görev</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 mr-2"></div>
+                                <span class="text-white/80">🏢 Fakülte</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-red-600 mr-2"></div>
+                                <span class="text-white/80">🏛️ Rektörlük</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 mr-2"></div>
+                                <span class="text-white/80">🏖️ Tatil</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 mr-2"></div>
+                                <span class="text-white/80">🤝 Toplantı</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gradient-to-r from-pink-500 to-pink-600 mr-2"></div>
+                                <span class="text-white/80">🎉 Etkinlik</span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="glass rounded-2xl p-6">
                         <h2 class="text-2xl font-semibold text-white mb-6 flex items-center">
                             📋 Etkinlikler
@@ -346,6 +420,7 @@
         const endDate = document.getElementById('endDate');
         const eventTitle = document.getElementById('eventTitle');
         const eventDescription = document.getElementById('eventDescription');
+        const eventCategory = document.getElementById('eventCategory');
         const isHoliday = document.getElementById('isHoliday');
         const addEventBtn = document.getElementById('addEventBtn');
         const eventsList = document.getElementById('eventsList');
@@ -526,7 +601,7 @@
             const start = startDate.value;
             const end = endDate.value;
             const description = eventDescription.value.trim();
-            const holiday = isHoliday.checked;
+            const category = eventCategory.value;
             
             if (!title || !start || !end) {
                 showNotification('Lütfen başlık ve tarih alanlarını doldurun', 'error');
@@ -546,7 +621,8 @@
                         start_date: start,
                         end_date: end,
                         description: description || null,
-                        is_holiday: holiday,
+                        category: category,
+                        is_holiday: category === 'tatil',
                         creator_name: currentUser
                     }]);
                 
@@ -555,7 +631,7 @@
                 // Clear form
                 eventTitle.value = '';
                 eventDescription.value = '';
-                isHoliday.checked = false;
+                eventCategory.value = 'gorev';
                 
                 showNotification('Etkinlik eklendi!', 'success');
                 
@@ -659,21 +735,24 @@
                 });
                 
                 if (dayEvents.length > 0) {
-                    const hasHoliday = dayEvents.some(event => event.is_holiday);
+                    // Group events by category and find the most important one for background color
+                    const categoryPriority = ['rektorluk', 'fakulte', 'tatil', 'toplanti', 'etkinlik', 'gorev'];
+                    let primaryCategory = 'gorev';
                     
-                    if (hasHoliday) {
-                        dayDiv.classList.add('has-holiday');
-                    } else {
-                        dayDiv.classList.add('has-event');
+                    for (const priority of categoryPriority) {
+                        if (dayEvents.some(event => event.category === priority)) {
+                            primaryCategory = priority;
+                            break;
+                        }
                     }
                     
-                    // Add dots
-                    dayEvents.slice(0, 3).forEach(event => {
+                    dayDiv.classList.add(`has-${primaryCategory}`);
+                    
+                    // Add dots for all categories present
+                    const categoriesPresent = [...new Set(dayEvents.map(event => event.category))];
+                    categoriesPresent.slice(0, 3).forEach(category => {
                         const dot = document.createElement('div');
-                        dot.className = 'event-dot';
-                        if (event.is_holiday) {
-                            dot.classList.add('holiday-dot');
-                        }
+                        dot.className = `event-dot ${category}`;
                         dayDiv.appendChild(dot);
                     });
                 }
@@ -739,13 +818,24 @@
                     startDateObj.toLocaleDateString('tr-TR') :
                     `${startDateObj.toLocaleDateString('tr-TR')} - ${endDateObj.toLocaleDateString('tr-TR')}`;
                 
-                const holidayBadge = event.is_holiday ? 
-                    '<span class="ml-2 px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full">🏖️ TATİL</span>' : '';
+                // Category info with colors
+                const categoryInfo = {
+                    'gorev': { icon: '📋', name: 'Genel Görev', color: 'bg-blue-500' },
+                    'fakulte': { icon: '🏢', name: 'Fakülte', color: 'bg-green-500' },
+                    'rektorluk': { icon: '🏛️', name: 'Rektörlük', color: 'bg-red-500' },
+                    'tatil': { icon: '🏖️', name: 'Tatil', color: 'bg-orange-500' },
+                    'toplanti': { icon: '🤝', name: 'Toplantı', color: 'bg-purple-500' },
+                    'etkinlik': { icon: '🎉', name: 'Etkinlik', color: 'bg-pink-500' }
+                };
+                
+                const category = categoryInfo[event.category] || categoryInfo['gorev'];
+                
+                const categoryBadge = `<span class="ml-2 px-2 py-1 ${category.color} text-white text-xs font-semibold rounded-full">${category.icon} ${category.name.toUpperCase()}</span>`;
                 
                 eventDiv.innerHTML = `
                     <div class="flex-1">
                         <h3 class="text-lg font-semibold text-gray-800 mb-1">
-                            ${event.title} ${holidayBadge}
+                            ${event.title} ${categoryBadge}
                         </h3>
                         <p class="text-sm text-gray-600 mb-1">📅 ${dateText}</p>
                         ${event.description ? `<p class="text-sm text-gray-700 mb-2">${event.description}</p>` : ''}
